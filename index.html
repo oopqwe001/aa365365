@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>宝くじ公式サイト | LOTOネット</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap');
+        :root { --official-red: #e60012; --bg-gray: #f2f2f2; }
+        body { 
+            font-family: 'Noto Sans JP', sans-serif; 
+            background-color: var(--bg-gray); 
+            color: #333; 
+            margin: 0; 
+            overflow-x: hidden; 
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+        }
+        .view-transition { animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .official-dotted-line { background-image: linear-gradient(to right, #ccc 50%, rgba(255,255,255,0) 0%); background-position: bottom; background-size: 6px 1px; background-repeat: repeat-x; height: 1px; width: 100%; }
+        ::-webkit-scrollbar { width: 0px; background: transparent; }
+        .btn-official { transition: all 0.2s; }
+        .btn-official:active { transform: scale(0.96); opacity: 0.9; }
+    </style>
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@^19.2.4",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
+    "react/": "https://esm.sh/react@^19.2.4/",
+    "@google/genai": "https://esm.sh/@google/genai@^1.41.0",
+    "vite": "https://esm.sh/vite@^7.3.1",
+    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.4"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+<body>
+    <div id="root"></div>
+    <script type="module" src="./index.tsx"></script>
+<script type="module" src="/index.tsx"></script>
+</body>
+</html>
