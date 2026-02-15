@@ -1,5 +1,6 @@
 
 
+
 import React, { useState, useEffect } from 'react';
 import { AppView, LotteryGame, Selection, User, AdminConfig, Purchase, Transaction } from './types';
 import { lotteryApi } from './services/api';
@@ -34,17 +35,33 @@ const App: React.FC = () => {
   const [activeSelectionId, setActiveSelectionId] = useState<string>('A');
 
   const refreshData = async () => {
-    const user = await lotteryApi.getActiveUser();
-    const config = await lotteryApi.getConfig();
-    const txs = await lotteryApi.getTransactions();
-    const users = await lotteryApi.getAllUsers();
-    setActiveUser(user); 
-    setAdminConfig(config); 
-    setTransactions(txs); 
-    setAllUsers(users.length ? users : [user]);
-    
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('admin') === 'true' && view === 'home') setView('admin');
+    try {
+      const user = await lotteryApi.getActiveUser();
+      const config = await lotteryApi.getConfig();
+      const txs = await lotteryApi.getTransactions();
+      const users = await lotteryApi.getAllUsers();
+      
+      setActiveUser(user); 
+      setAdminConfig(config); 
+      setTransactions(txs); 
+      setAllUsers(users.length ? users : [user]);
+      
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('admin') === 'true') {
+        // 通过 URL 进入时也要求输入口令
+        const code = window.prompt("管理コードを入力してください (Default: 8888)");
+        if (code === '8888') {
+          setView('admin');
+        } else {
+          alert("認証に失敗しました");
+          setView('home');
+        }
+        // 清除 URL 参数防止刷新时重复弹窗
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+    } catch (e) {
+      console.error("Data refresh failed", e);
+    }
   };
 
   useEffect(() => { refreshData(); }, []);
@@ -129,11 +146,27 @@ const App: React.FC = () => {
           <Navbar 
             user={activeUser} view={view} logoUrl={adminConfig.logoUrl} 
             onLoginView={() => setView('login')} onRegisterView={() => setView('register')}
-            onAdmin={() => setView('admin')} onBack={() => setView('home')} 
+            onAdmin={() => {
+               const code = window.prompt("管理コードを入力してください");
+               if (code === '8888') setView('admin');
+               else if (code !== null) alert("認証失敗");
+            }} 
+            onBack={() => setView('home')} 
           />
         )}
         <main className="flex-1 pb-20 overflow-y-auto">
-          {view === 'home' && <GameList games={GAMES} onBuy={(g) => { setSelectedGame(g); setView('summary'); }} onShowHistory={() => setView('history')} winningNumbers={adminConfig.winningNumbers} />}
+          {view === 'home' && (
+            <>
+              <GameList games={GAMES} onBuy={(g) => { setSelectedGame(g); setView('summary'); }} onShowHistory={() => setView('history')} winningNumbers={adminConfig.winningNumbers} />
+              <div className="px-6 py-10 text-center opacity-30 select-none">
+                <p className="text-[10px] text-gray-500 font-bold leading-relaxed">
+                  本サイトはシミュレーション用であり、<br/>
+                  実際の金銭のやり取りや賭博行為は一切行われません。<br/>
+                  © 2024 LOTO Simulation Lab.
+                </p>
+              </div>
+            </>
+          )}
           {view === 'summary' && <SummaryView game={selectedGame} selections={selections} onBack={() => setView('home')} onSelect={(id) => { setActiveSelectionId(id); setView('picker'); }} onQuickPick={(id) => { const nums: number[] = []; while(nums.length < selectedGame.pickCount) { const r = Math.floor(Math.random() * selectedGame.maxNumber) + 1; if(!nums.includes(r)) nums.push(r); } setSelections(prev => prev.map(s => s.id === id ? { ...s, numbers: nums.sort((a,b)=>a-b) } : s)); }} onDelete={(id) => setSelections(prev => prev.map(s => s.id === id ? { ...s, numbers: [] } : s))} onFinalize={async () => { if(!activeUser.isLoggedIn) { setView('login'); return; } await lotteryApi.processPurchase(activeUser.id, selectedGame, selections); await refreshData(); setView('home'); }} />}
           {view === 'picker' && <NumberPicker game={selectedGame} selectionId={activeSelectionId} initialNumbers={selections.find(s => s.id === activeSelectionId)?.numbers || []} onCancel={() => setView('summary')} onComplete={(nums) => { setSelections(prev => prev.map(s => s.id === activeSelectionId ? { ...s, numbers: nums } : s)); setView('summary'); }} />}
           {view === 'history' && <DrawHistory games={GAMES} history={adminConfig.winningNumbers} onBack={() => setView('home')} />}
@@ -142,7 +175,7 @@ const App: React.FC = () => {
           {view === 'withdraw' && <WithdrawForm onBack={() => setView('mypage')} onSubmit={handleWithdraw} />}
           {view === 'transactions' && <TransactionHistory userId={activeUser.id} transactions={transactions} onBack={() => setView('mypage')} />}
           {view === 'admin' && <AdminPanel games={GAMES} config={adminConfig} setConfig={(c) => { setAdminConfig(c); lotteryApi.saveConfig(c); }} onBack={() => setView('home')} users={allUsers} transactions={transactions} onProcessTx={handleProcessTx} onUpdateUser={handleUpdateUser} onExecuteDraw={async (d) => { await lotteryApi.executeDraw(d, GAMES); await refreshData(); }} />}
-          {view === 'login' && <LoginView onBack={() => setView('home')} onSuccess={async (e, p) => { const res = await lotteryApi.login(e, p); if(res.success) { await refreshData(); setView('home'); } else { alert('ログインに失敗しました'); } }} onGoToRegister={() => setView('register')} />}
+          {view === 'login' && <LoginView onBack={() => setView('home')} onSuccess={async (e, p) => { const res = await lotteryApi.login(e, p); if(res.success) { await refreshData(); setView('home'); } else { alert('ログインに失败しました'); } }} onGoToRegister={() => setView('register')} />}
           {view === 'register' && <RegisterView onBack={() => setView('home')} onSuccess={async (d) => { await lotteryApi.register(d.email, d.password, d.username); await refreshData(); setView('home'); }} />}
         </main>
         {view !== 'admin' && (
@@ -157,5 +190,6 @@ const App: React.FC = () => {
   );
 };
 export default App;
+
 
 
