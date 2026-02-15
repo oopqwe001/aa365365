@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 import { LotteryGame } from '../types';
 
@@ -22,12 +23,20 @@ const GameList: React.FC<Props> = ({ games, onBuy, onShowHistory, winningNumbers
             key={game.id} 
             className="bg-white rounded-lg overflow-hidden shadow-sm relative border border-gray-200"
           >
-            {/* 黄色缎带 */}
+            {/* 公式風キャリーオーバータグ */}
             {(game.id === 'loto7' || game.id === 'loto6') && (
-              <div className="absolute top-0 right-0 w-32 overflow-hidden h-16 pointer-events-none">
-                  <div className="bg-[#fff100] text-[#333] text-[9px] font-[900] text-center py-0.5 w-[150%] absolute top-3 right-[-35px] rotate-[15deg] shadow-sm">
-                      キャリーオーバー发生中
-                  </div>
+              <div className="absolute top-0 right-0 z-10">
+                <div 
+                  className="px-2 py-0.5 flex items-center justify-center border-l border-b border-black/5"
+                  style={{
+                    background: 'repeating-linear-gradient(-45deg, #fff100, #fff100 4px, #ffda00 4px, #ffda00 8px)',
+                    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.4)'
+                  }}
+                >
+                  <span className="text-[#005bac] text-[9px] font-[900] tracking-tighter whitespace-nowrap drop-shadow-sm">
+                    キャリーオーバー発生中
+                  </span>
+                </div>
               </div>
             )}
 
@@ -93,7 +102,7 @@ const GameList: React.FC<Props> = ({ games, onBuy, onShowHistory, winningNumbers
                     </span>
                   </div>
                   <div className="text-[8px] font-black text-gray-400 leading-none">
-                    {game.id === 'miniloto' ? '※ 理論値' : '※ キャリーオーバー发生时'}
+                    {game.id === 'miniloto' ? '※ 理論値' : '※ キャリーオーバー発生时'}
                   </div>
                 </div>
               </div>
@@ -133,3 +142,4 @@ const GameList: React.FC<Props> = ({ games, onBuy, onShowHistory, winningNumbers
 };
 
 export default GameList;
+
