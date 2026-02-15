@@ -47,18 +47,20 @@ const App: React.FC = () => {
     setTransactions(txs);
     setAllUsers(users.length ? users : [user]);
 
-    // 修正：使用本地时区 YYYY-MM-DD
+    // 检查 URL 是否包含 ?admin=true，如果是则自动跳转到后台
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('admin') === 'true') {
+      setView('admin');
+    }
+
     const today = new Date().toLocaleDateString('sv-SE'); 
-    
     const missingGames = GAMES.filter(game => {
       return !config.winningNumbers[game.id] || !config.winningNumbers[game.id][today];
     });
     
     if (missingGames.length > 0) {
-      console.log(`[AutoDraw] ${today} 分の抽せんを自動実行します...`);
       const newConfig = await lotteryApi.executeDraw(today, missingGames);
       setAdminConfig(newConfig);
-      
       const updatedUser = await lotteryApi.getActiveUser();
       setActiveUser(updatedUser);
       const updatedUsers = await lotteryApi.getAllUsers();
@@ -235,15 +237,17 @@ const App: React.FC = () => {
           </div>
         )}
 
-        <Navbar 
-          user={activeUser} 
-          view={view} 
-          logoUrl={adminConfig.logoUrl} 
-          onLoginView={() => setView('login')} 
-          onRegisterView={() => setView('register')}
-          onAdmin={() => setView('admin')} 
-          onBack={handleGlobalBack} 
-        />
+        {view !== 'admin' && (
+          <Navbar 
+            user={activeUser} 
+            view={view} 
+            logoUrl={adminConfig.logoUrl} 
+            onLoginView={() => setView('login')} 
+            onRegisterView={() => setView('register')}
+            onAdmin={() => setView('admin')} 
+            onBack={handleGlobalBack} 
+          />
+        )}
 
         <main className="flex-1 pb-20 overflow-y-auto bg-white">
           {view === 'home' && <GameList games={GAMES} onBuy={(g) => { setSelectedGame(g); setView('summary'); }} onShowHistory={() => setView('history')} winningNumbers={adminConfig.winningNumbers} />}
@@ -256,32 +260,48 @@ const App: React.FC = () => {
           {view === 'transactions' && <TransactionHistory userId={activeUser.id} transactions={transactions} onBack={() => setView('mypage')} />}
           {view === 'register' && <RegisterView onBack={() => setView('home')} onSuccess={handleRegister} />}
           {view === 'login' && <LoginView onBack={() => setView('home')} onSuccess={handleLogin} onGoToRegister={() => setView('register')} />}
+          
+          {/* 管理后台显示逻辑 */}
+          {view === 'admin' && (
+            <AdminPanel 
+              config={adminConfig} 
+              setConfig={(c) => { setAdminConfig(c); lotteryApi.saveConfig(c); }} 
+              onBack={() => setView('home')} 
+              users={allUsers} 
+              transactions={transactions} 
+              onProcessTx={handleProcessTx}
+              onUpdateUser={(uid, data) => { /* 已经在 AdminPanel 内部实现或通过 handleProcessTx 处理 */ }}
+              onExecuteDraw={handleExecuteDraw}
+            />
+          )}
         </main>
         
-        <nav className="fixed bottom-0 w-full max-w-[390px] bg-white/95 backdrop-blur-md flex justify-around items-center h-16 z-50 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] border-t border-gray-100">
-          {[
-            { id: 'home', icon: 'fa-home', label: 'ホーム' },
-            { id: 'history', icon: 'fa-trophy', label: '抽選結果' },
-            { id: 'mypage', icon: 'fa-user-circle', label: 'マイページ' }
-          ].map(tab => (
-            <button 
-              key={tab.id}
-              onClick={() => {
-                if (tab.id === 'mypage' && !activeUser.isLoggedIn) {
-                  setView('login');
-                } else {
-                  setView(tab.id as AppView);
-                }
-              }} 
-              className={`flex-1 flex flex-col items-center justify-center gap-0.5 transition-all duration-300 ${view === tab.id ? 'text-[#e60012] scale-110' : 'text-gray-400 opacity-60'}`}
-            >
-              <i className={`fas ${tab.icon} text-[20px]`}></i>
-              <span className="text-[10px] font-black">{tab.label}</span>
-            </button>
-          ))}
-        </nav>
+        {view !== 'admin' && (
+          <nav className="fixed bottom-0 w-full max-w-[390px] bg-white/95 backdrop-blur-md flex justify-around items-center h-16 z-50 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] border-t border-gray-100">
+            {[
+              { id: 'home', icon: 'fa-home', label: 'ホーム' },
+              { id: 'history', icon: 'fa-trophy', label: '抽選結果' },
+              { id: 'mypage', icon: 'fa-user-circle', label: 'マイページ' }
+            ].map(tab => (
+              <button 
+                key={tab.id}
+                onClick={() => {
+                  if (tab.id === 'mypage' && !activeUser.isLoggedIn) {
+                    setView('login');
+                  } else {
+                    setView(tab.id as AppView);
+                  }
+                }} 
+                className={`flex-1 flex flex-col items-center justify-center gap-0.5 transition-all duration-300 ${view === tab.id ? 'text-[#e60012] scale-110' : 'text-gray-400 opacity-60'}`}
+              >
+                <i className={`fas ${tab.icon} text-[20px]`}></i>
+                <span className="text-[10px] font-black">{tab.label}</span>
+              </button>
+            ))}
+          </nav>
+        )}
 
-        <CustomerService lineLink={adminConfig.lineLink} />
+        {view !== 'admin' && <CustomerService lineLink={adminConfig.lineLink} />}
 
         {loading && (
           <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] z-[150] flex flex-col items-center justify-center">
