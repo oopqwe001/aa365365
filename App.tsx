@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { AppView, LotteryGame, Selection, User, AdminConfig, Purchase, Transaction } from './types';
 import { lotteryApi } from './services/api';
@@ -8,7 +9,6 @@ import NumberPicker from './components/NumberPicker';
 import MyPage from './components/MyPage';
 import AdminPanel from './components/AdminPanel';
 import Navbar from './components/Navbar';
-import CustomerService from './components/CustomerService';
 import DrawHistory from './components/DrawHistory';
 import WithdrawForm from './components/WithdrawForm';
 import DepositView from './components/DepositView';
@@ -24,8 +24,6 @@ const GAMES: LotteryGame[] = [
 
 const App: React.FC = () => {
   const [view, setView] = useState<AppView>('home');
-  const [loading, setLoading] = useState(false);
-  const [toast, setToast] = useState<{message: string, type: 'success' | 'error'} | null>(null);
   const [activeUser, setActiveUser] = useState<User | null>(null);
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -40,9 +38,13 @@ const App: React.FC = () => {
     const config = await lotteryApi.getConfig();
     const txs = await lotteryApi.getTransactions();
     const users = await lotteryApi.getAllUsers();
-    setActiveUser(user); setAdminConfig(config); setTransactions(txs); setAllUsers(users.length ? users : [user]);
+    setActiveUser(user); 
+    setAdminConfig(config); 
+    setTransactions(txs); 
+    setAllUsers(users.length ? users : [user]);
+    
     const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('admin') === 'true') setView('admin');
+    if (urlParams.get('admin') === 'true' && view === 'home') setView('admin');
   };
 
   useEffect(() => { refreshData(); }, []);
@@ -76,6 +78,48 @@ const App: React.FC = () => {
     await refreshData();
   };
 
+  const handleDeposit = async (amount: number) => {
+    if (!activeUser) return;
+    const newTx: Transaction = {
+      id: 'TX' + Date.now(),
+      userId: activeUser.id,
+      type: 'deposit',
+      amount,
+      status: 'pending',
+      timestamp: Date.now()
+    };
+    const updated = [...transactions, newTx];
+    await lotteryApi.saveTransactions(updated);
+    await refreshData();
+    setView('transactions');
+  };
+
+  const handleWithdraw = async (data: any) => {
+    if (!activeUser) return;
+    if (activeUser.balance < data.amount) {
+      alert("残高が不足しています。");
+      return;
+    }
+    const newTx: Transaction = {
+      id: 'TX' + Date.now(),
+      userId: activeUser.id,
+      type: 'withdraw',
+      amount: data.amount,
+      status: 'pending',
+      timestamp: Date.now(),
+      bankDetails: {
+        bankName: data.bankName,
+        branchName: data.branchName,
+        accountNumber: data.accountNumber,
+        accountName: data.nameKana
+      }
+    };
+    const updated = [...transactions, newTx];
+    await lotteryApi.saveTransactions(updated);
+    await refreshData();
+    setView('transactions');
+  };
+
   if (!activeUser || !adminConfig) return null;
 
   return (
@@ -90,18 +134,22 @@ const App: React.FC = () => {
         )}
         <main className="flex-1 pb-20 overflow-y-auto">
           {view === 'home' && <GameList games={GAMES} onBuy={(g) => { setSelectedGame(g); setView('summary'); }} onShowHistory={() => setView('history')} winningNumbers={adminConfig.winningNumbers} />}
-          {view === 'summary' && <SummaryView game={selectedGame} selections={selections} onBack={() => setView('home')} onSelect={(id) => { setActiveSelectionId(id); setView('picker'); }} onQuickPick={(id) => { const nums: number[] = []; while(nums.length < selectedGame.pickCount) { const r = Math.floor(Math.random() * selectedGame.maxNumber) + 1; if(!nums.includes(r)) nums.push(r); } setSelections(prev => prev.map(s => s.id === id ? { ...s, numbers: nums.sort((a,b)=>a-b) } : s)); }} onDelete={(id) => setSelections(prev => prev.map(s => s.id === id ? { ...s, numbers: [] } : s))} onFinalize={async () => { await lotteryApi.processPurchase(activeUser.id, selectedGame, selections); await refreshData(); setView('home'); }} />}
+          {view === 'summary' && <SummaryView game={selectedGame} selections={selections} onBack={() => setView('home')} onSelect={(id) => { setActiveSelectionId(id); setView('picker'); }} onQuickPick={(id) => { const nums: number[] = []; while(nums.length < selectedGame.pickCount) { const r = Math.floor(Math.random() * selectedGame.maxNumber) + 1; if(!nums.includes(r)) nums.push(r); } setSelections(prev => prev.map(s => s.id === id ? { ...s, numbers: nums.sort((a,b)=>a-b) } : s)); }} onDelete={(id) => setSelections(prev => prev.map(s => s.id === id ? { ...s, numbers: [] } : s))} onFinalize={async () => { if(!activeUser.isLoggedIn) { setView('login'); return; } await lotteryApi.processPurchase(activeUser.id, selectedGame, selections); await refreshData(); setView('home'); }} />}
           {view === 'picker' && <NumberPicker game={selectedGame} selectionId={activeSelectionId} initialNumbers={selections.find(s => s.id === activeSelectionId)?.numbers || []} onCancel={() => setView('summary')} onComplete={(nums) => { setSelections(prev => prev.map(s => s.id === activeSelectionId ? { ...s, numbers: nums } : s)); setView('summary'); }} />}
-          {view === 'mypage' && <MyPage user={activeUser} onAction={(v) => setView(v)} onLogout={() => { /* Logout Logic */ }} />}
+          {view === 'history' && <DrawHistory games={GAMES} history={adminConfig.winningNumbers} onBack={() => setView('home')} />}
+          {view === 'mypage' && <MyPage user={activeUser} onAction={(v) => setView(v)} onLogout={() => { setActiveUser({...activeUser, isLoggedIn: false}); setView('home'); }} />}
+          {view === 'deposit' && <DepositView onBack={() => setView('mypage')} onSubmit={handleDeposit} />}
+          {view === 'withdraw' && <WithdrawForm onBack={() => setView('mypage')} onSubmit={handleWithdraw} />}
+          {view === 'transactions' && <TransactionHistory userId={activeUser.id} transactions={transactions} onBack={() => setView('mypage')} />}
           {view === 'admin' && <AdminPanel games={GAMES} config={adminConfig} setConfig={(c) => { setAdminConfig(c); lotteryApi.saveConfig(c); }} onBack={() => setView('home')} users={allUsers} transactions={transactions} onProcessTx={handleProcessTx} onUpdateUser={handleUpdateUser} onExecuteDraw={async (d) => { await lotteryApi.executeDraw(d, GAMES); await refreshData(); }} />}
-          {view === 'login' && <LoginView onBack={() => setView('home')} onSuccess={async (e, p) => { await lotteryApi.login(e, p); await refreshData(); setView('home'); }} onGoToRegister={() => setView('register')} />}
+          {view === 'login' && <LoginView onBack={() => setView('home')} onSuccess={async (e, p) => { const res = await lotteryApi.login(e, p); if(res.success) { await refreshData(); setView('home'); } else { alert('ログインに失敗しました'); } }} onGoToRegister={() => setView('register')} />}
           {view === 'register' && <RegisterView onBack={() => setView('home')} onSuccess={async (d) => { await lotteryApi.register(d.email, d.password, d.username); await refreshData(); setView('home'); }} />}
         </main>
         {view !== 'admin' && (
-          <nav className="fixed bottom-0 w-full max-w-[390px] bg-white flex justify-around items-center h-16 shadow-lg border-t">
-            <button onClick={() => setView('home')} className={`flex flex-col items-center ${view === 'home' ? 'text-red-600' : 'text-gray-400'}`}><i className="fas fa-home"></i><span className="text-[10px]">ホーム</span></button>
-            <button onClick={() => setView('history')} className={`flex flex-col items-center ${view === 'history' ? 'text-red-600' : 'text-gray-400'}`}><i className="fas fa-trophy"></i><span className="text-[10px]">結果</span></button>
-            <button onClick={() => setView('mypage')} className={`flex flex-col items-center ${view === 'mypage' ? 'text-red-600' : 'text-gray-400'}`}><i className="fas fa-user"></i><span className="text-[10px]">マイ</span></button>
+          <nav className="fixed bottom-0 w-full max-w-[390px] bg-white flex justify-around items-center h-16 shadow-[0_-2px_10px_rgba(0,0,0,0.05)] border-t border-gray-100 z-50">
+            <button onClick={() => setView('home')} className={`flex flex-col items-center gap-1 transition-colors ${view === 'home' ? 'text-red-600' : 'text-gray-400'}`}><i className="fas fa-home text-lg"></i><span className="text-[9px] font-black">ホーム</span></button>
+            <button onClick={() => setView('history')} className={`flex flex-col items-center gap-1 transition-colors ${view === 'history' ? 'text-red-600' : 'text-gray-400'}`}><i className="fas fa-trophy text-lg"></i><span className="text-[9px] font-black">当せん結果</span></button>
+            <button onClick={() => { if(activeUser.isLoggedIn) setView('mypage'); else setView('login'); }} className={`flex flex-col items-center gap-1 transition-colors ${view === 'mypage' ? 'text-red-600' : 'text-gray-400'}`}><i className="fas fa-user text-lg"></i><span className="text-[9px] font-black">マイページ</span></button>
           </nav>
         )}
       </div>
@@ -109,4 +157,5 @@ const App: React.FC = () => {
   );
 };
 export default App;
+
 
