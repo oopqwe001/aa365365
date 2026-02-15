@@ -1,4 +1,5 @@
 
+
 import React, { useState } from 'react';
 import { LotteryGame } from '../types';
 
@@ -46,7 +47,7 @@ const DrawHistory: React.FC<Props> = ({ games, history, onBack }) => {
 
             <div className="space-y-3">
               {/* 最新一期开奖结果 */}
-              {latestDraw && (
+              {latestDraw ? (
                 <div className="bg-white border border-gray-100 p-5 rounded-2xl shadow-[0_4px_12px_rgba(0,0,0,0.03)] ring-1 ring-black/[0.02]">
                   <div className="flex justify-between items-start mb-4">
                     <span className="text-[11px] text-gray-500 font-bold bg-gray-50 px-2 py-1 rounded">
@@ -66,17 +67,22 @@ const DrawHistory: React.FC<Props> = ({ games, history, onBack }) => {
                     ))}
                   </div>
                 </div>
+              ) : (
+                <div className="bg-gray-50 p-6 rounded-2xl border border-dashed border-gray-200 text-center">
+                  <p className="text-[11px] text-gray-400 font-bold">次回の抽せんをお楽しみに</p>
+                </div>
               )}
 
-              {/* 收放按钮：位于最新结果的正下方，完全覆盖您指示的区域 */}
+              {/* 收放按钮 */}
               <div className="pt-1">
                 <button 
                   onClick={() => toggleExpand(game.id)}
+                  disabled={!latestDraw}
                   className={`w-full py-3.5 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-[0.98] border ${
                     isExpanded 
                       ? 'bg-gray-100 border-gray-300 text-gray-700 shadow-inner' 
                       : 'bg-white border-gray-200 text-gray-500 shadow-sm hover:border-gray-300'
-                  }`}
+                  } ${!latestDraw ? 'opacity-30 grayscale cursor-not-allowed' : ''}`}
                 >
                   <span className="text-[12px] font-black">
                     {isExpanded ? '履歴を閉じる' : '過去の抽せん結果をもっと見る'}

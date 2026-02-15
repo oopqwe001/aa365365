@@ -1,6 +1,7 @@
 
 
 
+
 import { User, Transaction, AdminConfig, Purchase, LotteryGame } from '../types';
 
 const STORAGE_KEYS = {
@@ -63,12 +64,51 @@ export const lotteryApi = {
 
   async getConfig(): Promise<AdminConfig> {
     const saved = localStorage.getItem(STORAGE_KEYS.CONFIG);
+    let config: AdminConfig;
+
     if (saved) {
-      const parsed = JSON.parse(saved);
-      if (!parsed.prizeSettings) parsed.prizeSettings = { loto7: { tier1: 600000000, tier2: 10000000, tier3: 500000 }, loto6: { tier1: 200000000, tier2: 5000000, tier3: 200000 }, miniloto: { tier1: 10000000, tier2: 150000, tier3: 10000 } };
-      return parsed;
+      config = JSON.parse(saved);
+      if (!config.prizeSettings) config.prizeSettings = { loto7: { tier1: 600000000, tier2: 10000000, tier3: 500000 }, loto6: { tier1: 200000000, tier2: 5000000, tier3: 200000 }, miniloto: { tier1: 10000000, tier2: 150000, tier3: 10000 } };
+    } else {
+      config = { 
+        lineLink: '', 
+        logoUrl: "", 
+        winningNumbers: {}, 
+        prizeSettings: { 
+          loto7: { tier1: 600000000, tier2: 10000000, tier3: 500000 }, 
+          loto6: { tier1: 200000000, tier2: 5000000, tier3: 200000 }, 
+          miniloto: { tier1: 10000000, tier2: 150000, tier3: 10000 } 
+        } 
+      };
     }
-    return { lineLink: '', logoUrl: "", winningNumbers: {}, prizeSettings: { loto7: { tier1: 600000000, tier2: 10000000, tier3: 500000 }, loto6: { tier1: 200000000, tier2: 5000000, tier3: 200000 }, miniloto: { tier1: 10000000, tier2: 150000, tier3: 10000 } } };
+
+    // 初始化模拟开奖数据 (如果没有记录的话)
+    const games = [
+      { id: 'loto7', pickCount: 7, maxNumber: 37 },
+      { id: 'loto6', pickCount: 6, maxNumber: 43 },
+      { id: 'miniloto', pickCount: 5, maxNumber: 31 }
+    ];
+
+    let hasChanges = false;
+    games.forEach(g => {
+      if (!config.winningNumbers[g.id] || Object.keys(config.winningNumbers[g.id]).length === 0) {
+        config.winningNumbers[g.id] = {};
+        // 为过去3天生成数据
+        for (let i = 0; i < 3; i++) {
+          const d = new Date();
+          d.setDate(d.getDate() - i);
+          const dateStr = d.toLocaleDateString('sv-SE');
+          config.winningNumbers[g.id][dateStr] = generateRandomNumbers(g.pickCount, g.maxNumber);
+        }
+        hasChanges = true;
+      }
+    });
+
+    if (hasChanges || !saved) {
+      await this.saveConfig(config);
+    }
+
+    return config;
   },
 
   async saveConfig(config: AdminConfig) { localStorage.setItem(STORAGE_KEYS.CONFIG, JSON.stringify(config)); },
@@ -140,9 +180,9 @@ export const lotteryApi = {
     return config;
   },
 
-  // 退化为纯随机生成
   async predictLuckyNumbers(gameName: string, pickCount: number, maxNumber: number): Promise<number[]> {
     return generateRandomNumbers(pickCount, maxNumber);
   }
 };
+
 
