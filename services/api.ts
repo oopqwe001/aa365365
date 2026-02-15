@@ -1,5 +1,7 @@
 
+
 import { User, Transaction, AdminConfig, Purchase, LotteryGame } from '../types';
+import { GoogleGenAI, Type } from "@google/genai";
 
 const STORAGE_KEYS = {
   USER: 'lottery_active_user',
@@ -138,5 +140,42 @@ export const lotteryApi = {
     const updated = users.find(u => u.id === active.id);
     if (updated) await this.saveActiveUser({ ...updated, isLoggedIn: true });
     return config;
+  },
+
+  async predictLuckyNumbers(gameName: string, pickCount: number, maxNumber: number): Promise<number[]> {
+    try {
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: `あなたは宝くじの専門家です。${gameName}（1から${maxNumber}の中から${pickCount}个选ぶ）のラッキーナンバーを${pickCount}个予測してください。
+        直近のトレンドや数秘術的な観点から、期待値の高そうな数字を厳选してください。
+        返信はJSON形式で、"numbers"というキーに数字の配列を入れて返してください。例: {"numbers": [1, 5, 12, ...]}`,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              numbers: {
+                type: Type.ARRAY,
+                items: { type: Type.INTEGER }
+              }
+            },
+            required: ["numbers"]
+          }
+        }
+      });
+
+      const result = JSON.parse(response.text || '{"numbers": []}');
+      const validNumbers = Array.from(new Set(result.numbers as number[]))
+        .filter(n => (n as number) >= 1 && (n as number) <= maxNumber)
+        .slice(0, pickCount)
+        .sort((a, b) => (a as number) - (b as number));
+      
+      return validNumbers as number[];
+    } catch (error) {
+      console.error("Gemini Prediction Error:", error);
+      return [];
+    }
   }
 };
+
