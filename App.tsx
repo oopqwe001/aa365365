@@ -30,30 +30,52 @@ const App: React.FC = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [adminConfig, setAdminConfig] = useState<AdminConfig | null>(null);
 
+  const [selectedGame, setSelectedGame] = useState<LotteryGame>(GAMES[0]);
+  const [selections, setSelections] = useState<Selection[]>(
+    ['A', 'B', 'C', 'D', 'E'].map(id => ({ id, numbers: [], count: 1, duration: 1 }))
+  );
+  const [activeSelectionId, setActiveSelectionId] = useState<string>('A');
+
+  const refreshData = async () => {
+    const user = await lotteryApi.getActiveUser();
+    const config = await lotteryApi.getConfig();
+    const txs = await lotteryApi.getTransactions();
+    const users = await lotteryApi.getAllUsers();
+    
+    setActiveUser(user);
+    setAdminConfig(config);
+    setTransactions(txs);
+    setAllUsers(users.length ? users : [user]);
+
+    // 修正：使用本地时区 YYYY-MM-DD
+    const today = new Date().toLocaleDateString('sv-SE'); 
+    
+    const missingGames = GAMES.filter(game => {
+      return !config.winningNumbers[game.id] || !config.winningNumbers[game.id][today];
+    });
+    
+    if (missingGames.length > 0) {
+      console.log(`[AutoDraw] ${today} 分の抽せんを自動実行します...`);
+      const newConfig = await lotteryApi.executeDraw(today, missingGames);
+      setAdminConfig(newConfig);
+      
+      const updatedUser = await lotteryApi.getActiveUser();
+      setActiveUser(updatedUser);
+      const updatedUsers = await lotteryApi.getAllUsers();
+      setAllUsers(updatedUsers);
+    }
+  };
+
   useEffect(() => {
-    const init = async () => {
-      const user = await lotteryApi.getActiveUser();
-      const config = await lotteryApi.getConfig();
-      const txs = await lotteryApi.getTransactions();
-      const users = await lotteryApi.getAllUsers();
-      setActiveUser(user);
-      setAdminConfig(config);
-      setTransactions(txs);
-      setAllUsers(users.length ? users : [user]);
-    };
-    init();
+    refreshData();
+    const interval = setInterval(refreshData, 5 * 60 * 1000);
+    return () => clearInterval(interval);
   }, []);
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
   };
-
-  const [selectedGame, setSelectedGame] = useState<LotteryGame>(GAMES[0]);
-  const [selections, setSelections] = useState<Selection[]>(
-    ['A', 'B', 'C', 'D', 'E'].map(id => ({ id, numbers: [], count: 1, duration: 1 }))
-  );
-  const [activeSelectionId, setActiveSelectionId] = useState<string>('A');
 
   const handleRegister = async (data: any) => {
     setLoading(true);
@@ -63,6 +85,7 @@ const App: React.FC = () => {
       setActiveUser(res.user);
       showToast("登録が完了しました！");
       setView('home');
+      refreshData();
     } else {
       showToast(res.message, 'error');
     }
@@ -76,6 +99,7 @@ const App: React.FC = () => {
       setActiveUser(res.user);
       showToast("ログインしました");
       setView('home');
+      refreshData();
     } else {
       showToast(res.message, 'error');
     }
@@ -90,6 +114,88 @@ const App: React.FC = () => {
     setView('home');
   };
 
+  const handleDepositSubmit = async (amount: number) => {
+    if (!activeUser) return;
+    const newTx: Transaction = {
+      id: 'T' + Date.now(),
+      userId: activeUser.id,
+      type: 'deposit',
+      amount: amount,
+      status: 'pending',
+      timestamp: Date.now()
+    };
+    const updatedTxs = [newTx, ...transactions];
+    setTransactions(updatedTxs);
+    await lotteryApi.saveTransactions(updatedTxs);
+    showToast("入金申請を受け付けました。LINEでご連絡ください。");
+    setView('mypage');
+  };
+
+  const handleWithdrawSubmit = async (data: any) => {
+    if (!activeUser || activeUser.balance < data.amount) {
+      showToast("残高が不足しています", "error");
+      return;
+    }
+    const newTx: Transaction = {
+      id: 'T' + Date.now(),
+      userId: activeUser.id,
+      type: 'withdraw',
+      amount: data.amount,
+      status: 'pending',
+      timestamp: Date.now(),
+      bankDetails: {
+        bankName: data.bankName,
+        branchName: data.branchName,
+        accountNumber: data.accountNumber,
+        accountName: data.nameKana
+      }
+    };
+    const updatedTxs = [newTx, ...transactions];
+    setTransactions(updatedTxs);
+    await lotteryApi.saveTransactions(updatedTxs);
+    showToast("出金申請を受け付けました。審査をお待ちください。");
+    setView('mypage');
+  };
+
+  const handleProcessTx = async (id: string, status: 'approved' | 'rejected') => {
+    const tx = transactions.find(t => t.id === id);
+    if (!tx) return;
+
+    if (status === 'approved') {
+      const users = await lotteryApi.getAllUsers();
+      const user = users.find(u => u.id === tx.userId);
+      if (user) {
+        if (tx.type === 'deposit') user.balance += tx.amount;
+        else if (tx.type === 'withdraw') user.balance -= tx.amount;
+        await lotteryApi.saveAllUsers(users);
+        if (activeUser?.id === user.id) {
+          const updatedActive = { ...activeUser, balance: user.balance };
+          setActiveUser(updatedActive);
+          await lotteryApi.saveActiveUser(updatedActive);
+        }
+      }
+    }
+
+    const updatedTxs = transactions.map(t => t.id === id ? { ...t, status } : t);
+    setTransactions(updatedTxs);
+    await lotteryApi.saveTransactions(updatedTxs);
+    showToast(`取引を${status === 'approved' ? '承認' : '却下'}しました`);
+  };
+
+  const handleExecuteDraw = async (date: string) => {
+    setLoading(true);
+    try {
+      const newConfig = await lotteryApi.executeDraw(date, GAMES);
+      setAdminConfig(newConfig);
+      await refreshData();
+      showToast(`${date} の開奖と派奖が完了しました！`);
+    } catch (e) {
+      showToast("開奖エラーが発生しました", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const finalizePurchase = async () => {
     if (!activeUser?.isLoggedIn) { setView('login'); return; }
     setLoading(true);
@@ -100,6 +206,7 @@ const App: React.FC = () => {
       showToast("購入が完了しました");
       setView('home');
       setSelections(['A', 'B', 'C', 'D', 'E'].map(id => ({ id, numbers: [], count: 1, duration: 1 })));
+      refreshData();
     } else {
       showToast(res.message, 'error');
     }
@@ -119,7 +226,6 @@ const App: React.FC = () => {
     <div className="flex justify-center bg-[#f2f2f2] min-h-screen font-sans">
       <div className={`w-full max-w-[390px] bg-white min-h-screen relative flex flex-col shadow-2xl overflow-hidden`}>
         
-        {/* Toast Notification */}
         {toast && (
           <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[200] w-[90%] max-w-[350px] animate-in slide-in-from-top-4">
              <div className={`px-4 py-3 rounded-xl shadow-xl border flex items-center gap-3 ${toast.type === 'success' ? 'bg-green-600 border-green-500 text-white' : 'bg-red-600 border-red-500 text-white'}`}>
@@ -145,14 +251,12 @@ const App: React.FC = () => {
           {view === 'picker' && <NumberPicker game={selectedGame} selectionId={activeSelectionId} initialNumbers={selections.find(s => s.id === activeSelectionId)?.numbers || []} onCancel={() => setView('summary')} onComplete={(nums) => { setSelections(prev => prev.map(s => s.id === activeSelectionId ? { ...s, numbers: nums } : s)); setView('summary'); }} />}
           {view === 'mypage' && <MyPage user={activeUser} onAction={(v) => setView(v)} onLogout={handleLogout} />}
           {view === 'history' && <DrawHistory games={GAMES} history={adminConfig.winningNumbers} onBack={() => setView('home')} />}
-          {view === 'deposit' && <DepositView onBack={() => setView('mypage')} onSubmit={async (amt) => { showToast("入金申請が送信されました"); setView('mypage'); }} />}
-          {view === 'withdraw' && <WithdrawForm onBack={() => setView('mypage')} onSubmit={(data) => { showToast("出金申請が送信されました"); setView('mypage'); }} />}
+          {view === 'deposit' && <DepositView onBack={() => setView('mypage')} onSubmit={handleDepositSubmit} />}
+          {view === 'withdraw' && <WithdrawForm onBack={() => setView('mypage')} onSubmit={handleWithdrawSubmit} />}
           {view === 'transactions' && <TransactionHistory userId={activeUser.id} transactions={transactions} onBack={() => setView('mypage')} />}
           {view === 'register' && <RegisterView onBack={() => setView('home')} onSuccess={handleRegister} />}
           {view === 'login' && <LoginView onBack={() => setView('home')} onSuccess={handleLogin} onGoToRegister={() => setView('register')} />}
         </main>
-        
-        {view === 'admin' && <AdminPanel config={adminConfig} setConfig={async (c) => { setAdminConfig(c); await lotteryApi.saveConfig(c); }} onBack={() => setView('home')} users={allUsers} transactions={transactions} onProcessTx={()=>{}} onUpdateUser={()=>{}} onExecuteDraw={()=>{}} />}
         
         <nav className="fixed bottom-0 w-full max-w-[390px] bg-white/95 backdrop-blur-md flex justify-around items-center h-16 z-50 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] border-t border-gray-100">
           {[
