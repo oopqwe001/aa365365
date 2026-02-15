@@ -1,9 +1,10 @@
 
 import React, { useState, useRef, useMemo } from 'react';
-import { AdminConfig, User, Transaction, Purchase } from '../types';
+import { AdminConfig, User, Transaction, Purchase, LotteryGame } from '../types';
 import { lotteryApi } from '../services/api';
 
 interface Props {
+  games: LotteryGame[];
   config: AdminConfig;
   setConfig: (config: AdminConfig) => void;
   onBack: () => void;
@@ -14,18 +15,44 @@ interface Props {
   onExecuteDraw: (date: string) => void;
 }
 
-const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transactions, onProcessTx, onUpdateUser, onExecuteDraw }) => {
+const AdminPanel: React.FC<Props> = ({ games, config, setConfig, onBack, users, transactions, onProcessTx, onUpdateUser, onExecuteDraw }) => {
   const [tab, setTab] = useState<'users' | 'finance' | 'lottery' | 'system' | 'prizes' | 'orders'>('lottery');
   const [editingUser, setEditingUser] = useState<User | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // 预设号码表单状态
+  const tomorrowStr = new Date(Date.now() + 86400000).toLocaleDateString('sv-SE');
+  const [presetGameId, setPresetGameId] = useState<string>(games[0].id);
+  const [presetDate, setPresetDate] = useState<string>(tomorrowStr);
+  const [presetNumbers, setPresetNumbers] = useState<string>('');
 
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => setConfig({ ...config, logoUrl: reader.result as string });
-      reader.readAsDataURL(file);
+  const selectedGameRule = useMemo(() => games.find(g => g.id === presetGameId), [presetGameId, games]);
+
+  const handleSavePreset = () => {
+    if (!selectedGameRule) return;
+    const nums = presetNumbers.split(/[ ,，、]/).filter(n => n.trim() !== '').map(n => parseInt(n));
+    
+    // 基础校验
+    if (nums.length !== selectedGameRule.pickCount) {
+      alert(`号码个数不正确！${selectedGameRule.name} 需要 ${selectedGameRule.pickCount} 个号码。`);
+      return;
     }
+    if (nums.some(n => isNaN(n) || n < 1 || n > selectedGameRule.maxNumber)) {
+      alert(`包含无效数字！号码范围必须在 1 - ${selectedGameRule.maxNumber} 之间。`);
+      return;
+    }
+    if (new Set(nums).size !== nums.length) {
+      alert('号码不能重复！');
+      return;
+    }
+
+    const sortedNums = nums.sort((a, b) => a - b);
+    const newConfig = { ...config };
+    if (!newConfig.winningNumbers[presetGameId]) newConfig.winningNumbers[presetGameId] = {};
+    newConfig.winningNumbers[presetGameId][presetDate] = sortedNums;
+    
+    setConfig(newConfig);
+    alert(`${presetDate} 的 ${selectedGameRule.name} 号码已预设为: ${sortedNums.join(', ')}`);
+    setPresetNumbers('');
   };
 
   const updatePrize = (gameId: string, tier: 'tier1' | 'tier2' | 'tier3', value: string) => {
@@ -38,7 +65,6 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
     setConfig(newConfig);
   };
 
-  // 提取所有购票记录
   const allOrders = useMemo(() => {
     const orders: { user: User, purchase: Purchase }[] = [];
     users.forEach(u => {
@@ -53,7 +79,7 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
     const success = await lotteryApi.updatePurchaseTier(userId, purchaseId, tier);
     if (success) {
       alert('中奖干预设置成功！下次执行该日期开奖时生效。');
-      window.location.reload(); // 简单刷新以获取最新状态
+      window.location.reload();
     }
   };
 
@@ -72,7 +98,6 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
       </header>
 
       <div className="flex-1 flex overflow-hidden">
-        {/* 侧边导航 */}
         <aside className="w-56 bg-[#1a1c1e] border-r border-white/5 p-3 flex flex-col justify-between">
           <nav className="space-y-1">
             {[
@@ -94,14 +119,64 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
           </nav>
         </aside>
 
-        {/* 主内容区域 */}
         <main className="flex-1 p-6 overflow-y-auto">
           {tab === 'lottery' && (
-            <div className="max-w-4xl space-y-6">
+            <div className="max-w-4xl space-y-8">
+              {/* 预设号码区域 */}
+              <div className="bg-[#1a1c1e] rounded-2xl p-6 border border-white/5 shadow-sm">
+                <h3 className="text-white font-black text-base flex items-center gap-2 mb-6">
+                  <i className="fas fa-edit text-blue-400"></i> 手动预设开奖号码 (设置明日号码)
+                </h3>
+                
+                <div className="grid grid-cols-2 gap-6 mb-6">
+                   <div>
+                     <label className="block text-[10px] text-gray-500 font-bold mb-2">选择彩种</label>
+                     <select 
+                       value={presetGameId}
+                       onChange={e => setPresetGameId(e.target.value)}
+                       className="w-full bg-[#0f1113] border border-white/10 rounded-xl px-4 py-3 text-sm font-bold outline-none text-white"
+                     >
+                       {games.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+                     </select>
+                   </div>
+                   <div>
+                     <label className="block text-[10px] text-gray-500 font-bold mb-2">选择日期</label>
+                     <input 
+                       type="date" 
+                       value={presetDate}
+                       onChange={e => setPresetDate(e.target.value)}
+                       className="w-full bg-[#0f1113] border border-white/10 rounded-xl px-4 py-3 text-sm font-bold outline-none text-white"
+                     />
+                   </div>
+                </div>
+
+                <div className="mb-6">
+                  <label className="block text-[10px] text-gray-500 font-bold mb-2 uppercase italic">
+                    输入中奖号码 ({selectedGameRule?.pickCount}个数字，用空格或逗号隔开)
+                  </label>
+                  <input 
+                    type="text"
+                    placeholder={`例如: ${Array.from({length: selectedGameRule?.pickCount || 0}, (_, i) => i+1).join(' ')}`}
+                    value={presetNumbers}
+                    onChange={e => setPresetNumbers(e.target.value)}
+                    className="w-full bg-[#0f1113] border border-white/10 rounded-xl px-4 py-4 text-lg font-black tracking-widest outline-none text-blue-400 placeholder:text-gray-700"
+                  />
+                </div>
+
+                <button 
+                  onClick={handleSavePreset}
+                  className="w-full bg-blue-600 text-white py-4 rounded-xl font-black text-sm hover:bg-blue-500 shadow-lg transition-all"
+                >
+                  保存预设号码
+                </button>
+              </div>
+
+              {/* 一键开奖区域 */}
               <div className="bg-[#1a1c1e] rounded-2xl p-6 border border-white/5 shadow-sm bg-gradient-to-br from-[#1a1c1e] to-[#25282b]">
                 <h3 className="text-white font-black text-base flex items-center gap-2 mb-4">
-                  <i className="fas fa-bolt text-yellow-400"></i> 一键执行今日开奖
+                  <i className="fas fa-bolt text-yellow-400"></i> 执行开奖 (结算盈亏)
                 </h3>
+                <p className="text-[10px] text-gray-500 mb-4">执行后将比对会员投注并自动发放奖金。如果已有预设号码，则使用预设值。</p>
                 <div className="flex gap-4">
                    <input type="date" className="bg-[#0f1113] border border-white/10 rounded-xl px-4 py-3 text-sm font-bold outline-none" defaultValue={new Date().toLocaleDateString('sv-SE')} id="exec-date" />
                    <button 
@@ -111,8 +186,33 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
                     }}
                     className="flex-1 bg-yellow-600 text-black py-3 rounded-xl font-black text-sm hover:bg-yellow-500 shadow-lg transition-all"
                    >
-                     执行开奖及派奖 (含内定逻辑)
+                     一键执行派奖
                    </button>
+                </div>
+              </div>
+
+              {/* 现有预约列表预览 */}
+              <div className="bg-black/20 p-6 rounded-2xl border border-white/5">
+                <h4 className="text-gray-400 font-black text-xs mb-4 uppercase">已保存的开奖预设</h4>
+                <div className="space-y-2">
+                  {Object.entries(config.winningNumbers).map(([gid, dates]) => (
+                    Object.entries(dates as Record<string, number[]>).map(([date, nums]) => {
+                      if (new Date(date) >= new Date(new Date().toLocaleDateString('sv-SE'))) {
+                        return (
+                          <div key={`${gid}-${date}`} className="flex justify-between items-center bg-[#1a1c1e] p-3 rounded-xl border border-white/5">
+                            <div>
+                              <span className="text-[10px] font-bold text-blue-400 mr-2 uppercase">{gid}</span>
+                              <span className="text-[10px] font-bold text-gray-500">{date}</span>
+                            </div>
+                            <div className="flex gap-1">
+                              {nums.map((n, i) => <span key={i} className="w-5 h-5 bg-gray-800 rounded-full flex items-center justify-center text-[9px] text-white font-black">{n}</span>)}
+                            </div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })
+                  ))}
                 </div>
               </div>
             </div>
@@ -296,7 +396,6 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
         </main>
       </div>
 
-      {/* 会员编辑模态框 */}
       {editingUser && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-[110] p-4">
           <div className="bg-[#1a1c1e] w-full max-w-md rounded-3xl p-8 border border-white/10 relative">
