@@ -1,5 +1,6 @@
 
 
+
 import React, { useState } from 'react';
 import { LotteryGame } from '../types';
 import { lotteryApi } from '../services/api';
@@ -14,7 +15,6 @@ interface Props {
 
 const NumberPicker: React.FC<Props> = ({ game, selectionId, initialNumbers, onCancel, onComplete }) => {
   const [selected, setSelected] = useState<number[]>(initialNumbers);
-  const [isAiLoading, setIsAiLoading] = useState(false);
   const totalSlots = game.pickCount;
 
   const toggleNumber = (num: number) => {
@@ -34,17 +34,6 @@ const NumberPicker: React.FC<Props> = ({ game, selectionId, initialNumbers, onCa
       if (!nums.includes(r)) nums.push(r);
     }
     setSelected(nums.sort((a, b) => a - b));
-  };
-
-  const handleAiPredict = async () => {
-    setIsAiLoading(true);
-    const nums = await lotteryApi.predictLuckyNumbers(game.fullName, game.pickCount, game.maxNumber);
-    if (nums.length === game.pickCount) {
-      setSelected(nums);
-    } else {
-      generateRandom();
-    }
-    setIsAiLoading(false);
   };
 
   return (
@@ -114,15 +103,6 @@ const NumberPicker: React.FC<Props> = ({ game, selectionId, initialNumbers, onCa
                   <div className="w-3 h-3 bg-[#76a301] rounded-sm"></div>
                   <span className="text-[9px] font-bold text-gray-500">ランダム選択</span>
                 </div>
-                {/* 整合 AI 入口 */}
-                <button 
-                  onClick={handleAiPredict}
-                  disabled={isAiLoading}
-                  className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full border border-purple-200 bg-purple-50 transition-all active:scale-95 ${isAiLoading ? 'animate-pulse opacity-50' : ''}`}
-                >
-                  <i className={`fas fa-robot text-[8px] text-purple-500`}></i>
-                  <span className="text-[8px] font-black text-purple-600">AI</span>
-                </button>
               </div>
               <div className="text-[12px] font-bold text-gray-800">
                 あと <span className="text-[#e10000] text-xl font-black italic">{totalSlots - selected.length}</span> 個
