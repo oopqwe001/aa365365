@@ -1,5 +1,6 @@
 
-import React from 'react';
+
+import React, { useState } from 'react';
 import { User, AppView } from '../types';
 
 interface Props {
@@ -9,18 +10,43 @@ interface Props {
 }
 
 const MyPage: React.FC<Props> = ({ user, onAction, onLogout }) => {
+  const [tapCount, setTapCount] = useState(0);
+
+  const handleSecretTap = () => {
+    const newCount = tapCount + 1;
+    if (newCount >= 7) {
+      setTapCount(0);
+      const code = window.prompt("管理コードを入力してください");
+      // 这里的 8888 是预设的管理代码，你可以随意更改
+      if (code === '8888') {
+        onAction('admin');
+      } else if (code !== null) {
+        alert("コードが正しくありません");
+      }
+    } else {
+      setTapCount(newCount);
+      // 3秒后重置点击计数，防止长时间累计误触发
+      setTimeout(() => setTapCount(0), 3000);
+    }
+  };
+
   return (
-    <div className="min-h-full bg-[#fffdf0] pb-10 view-transition">
+    <div className="min-h-full bg-[#fffdf0] pb-10 view-transition font-sans">
       <div className="p-5">
         <h2 className="text-[22px] font-black text-[#333] mb-6 tracking-tight">マイページ</h2>
         
-        {/* 余额卡片 - 增加黄色装饰与阴影 */}
+        {/* 余额卡片 */}
         <div className="bg-white rounded-[1.5rem] p-8 shadow-[0_10px_30px_rgba(0,0,0,0.03)] border border-gray-100 mb-8 relative overflow-hidden">
-          {/* 顶部黄色装饰条 */}
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#ffd700] via-[#fff100] to-[#ffd700]"></div>
           
           <div className="text-center">
-            <p className="text-[13px] text-gray-400 font-bold mb-2">お預かり当せん金</p>
+            {/* 隐藏入口：点击这个标题 7 次 */}
+            <p 
+              onClick={handleSecretTap}
+              className="text-[13px] text-gray-400 font-bold mb-2 cursor-default select-none active:opacity-60"
+            >
+              お預かり当せん金
+            </p>
             <div className="flex items-baseline justify-center gap-2 mb-8">
               <span className="text-2xl font-black text-[#1a1c1e]">¥</span>
               <span className="text-4xl font-black text-[#1a1c1e] tracking-tighter">
@@ -45,8 +71,8 @@ const MyPage: React.FC<Props> = ({ user, onAction, onLogout }) => {
           </div>
         </div>
 
-        {/* 列表菜单 - 对齐截图样式 */}
-        <div className="bg-white rounded-[1.5rem] border border-gray-100 overflow-hidden shadow-[0_5px_15px_rgba(0,0,0,0.02)]">
+        {/* 列表菜单 */}
+        <div className="bg-white rounded-[1.5rem] border border-gray-100 overflow-hidden shadow-[0_5px_15px_rgba(0,0,0,0.02)] mb-8">
           {[
             { icon: 'fa-history', label: '取引履歴', action: () => onAction('transactions') },
             { icon: 'fa-credit-card', label: '口座設定' },
@@ -69,9 +95,14 @@ const MyPage: React.FC<Props> = ({ user, onAction, onLogout }) => {
             </button>
           ))}
         </div>
+
+        <div className="px-6 text-center">
+           <p className="text-[10px] text-gray-300 font-bold">アプリバージョン: 2.5.1-stable</p>
+        </div>
       </div>
     </div>
   );
 };
 
 export default MyPage;
+
