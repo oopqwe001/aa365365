@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { AppView, LotteryGame, Selection, User, AdminConfig, Purchase, Transaction } from './types';
 import { lotteryApi } from './services/api';
-import { auth, db } from './firebase';
+import { auth, db } from './services/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { onSnapshot, collection, doc } from 'firebase/firestore';
 import GameList from './components/GameList';
@@ -354,4 +354,3 @@ const App: React.FC = () => {
 };
 
 export default App;
-

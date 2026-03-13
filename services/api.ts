@@ -1,6 +1,6 @@
 
 import { User, Transaction, AdminConfig, Purchase, LotteryGame } from '../types';
-import { db, auth } from '../firebase';
+import { db, auth } from './firebase';
 import { 
   doc, 
   getDoc, 
@@ -373,5 +373,4 @@ export const lotteryApi = {
     }
   }
 };
-
 

@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { User, AppView } from '../types';
-import { auth } from '../firebase';
+import { auth } from '../services/firebase';
 
 interface Props {
   user: User;
@@ -80,4 +80,3 @@ const MyPage: React.FC<Props> = ({ user, onAction, onLogout }) => {
 };
 
 export default MyPage;
-
