@@ -52,6 +52,7 @@ const MyPage: React.FC<Props> = ({ user, onAction, onLogout }) => {
         <div className="bg-white rounded-[1.5rem] border border-gray-100 overflow-hidden shadow-[0_5px_15px_rgba(0,0,0,0.02)]">
           {[
             ...(isAdmin ? [{ icon: 'fa-user-shield', label: '管理后台 (Admin)', action: () => onAction('admin') }] : []),
+            { icon: 'fa-ticket-alt', label: '購入履歴', action: () => onAction('purchases') },
             { icon: 'fa-history', label: '取引履歴', action: () => onAction('transactions') },
             { icon: 'fa-credit-card', label: '口座設定' },
             { icon: 'fa-shield-alt', label: 'セキュリティ' },

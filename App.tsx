@@ -16,6 +16,7 @@ import DrawHistory from './components/DrawHistory';
 import WithdrawForm from './components/WithdrawForm';
 import DepositView from './components/DepositView';
 import TransactionHistory from './components/TransactionHistory';
+import PurchaseHistory from './components/PurchaseHistory';
 import RegisterView from './components/RegisterView';
 import LoginView from './components/LoginView';
 
@@ -251,7 +252,7 @@ const App: React.FC = () => {
   const handleGlobalBack = () => {
     if (view === 'picker') setView('summary');
     else if (view === 'summary') setView('home');
-    else if (view === 'deposit' || view === 'withdraw' || view === 'transactions') setView('mypage');
+    else if (view === 'deposit' || view === 'withdraw' || view === 'transactions' || view === 'purchases') setView('mypage');
     else if (view === 'login' || view === 'register') setView('home');
     else setView('home');
   };
@@ -290,6 +291,7 @@ const App: React.FC = () => {
           {view === 'deposit' && <DepositView onBack={() => setView('mypage')} onSubmit={handleDepositSubmit} />}
           {view === 'withdraw' && <WithdrawForm onBack={() => setView('mypage')} onSubmit={handleWithdrawSubmit} />}
           {view === 'transactions' && <TransactionHistory userId={activeUser.id} transactions={transactions} onBack={() => setView('mypage')} />}
+          {view === 'purchases' && <PurchaseHistory purchases={activeUser.purchases} games={GAMES} onBack={() => setView('mypage')} />}
           {view === 'register' && <RegisterView onBack={() => setView('home')} onSuccess={handleRegister} />}
           {view === 'login' && <LoginView onBack={() => setView('home')} onSuccess={handleLogin} onGoToRegister={() => setView('register')} />}
           {view === 'admin' && isAdmin && (

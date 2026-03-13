@@ -1,5 +1,5 @@
 
-export type AppView = 'home' | 'summary' | 'picker' | 'history' | 'mypage' | 'admin' | 'withdraw' | 'deposit' | 'transactions' | 'login' | 'register';
+export type AppView = 'home' | 'summary' | 'picker' | 'history' | 'mypage' | 'admin' | 'withdraw' | 'deposit' | 'transactions' | 'login' | 'register' | 'purchases';
 
 export interface BankInfo {
   bankName: string;
@@ -23,12 +23,11 @@ export interface Purchase {
   id: string;
   userId: string;
   gameId: string;
-  numbers: number[][]; 
+  numbers: number[][];
   timestamp: number;
   isProcessed: boolean;
   status: 'pending' | 'won' | 'lost';
   winAmount: number;
-  forcedWinTier?: 1 | 2 | 3 | 0; 
 }
 
 export interface Transaction {
@@ -47,13 +46,6 @@ export interface AdminConfig {
   winningNumbers: {
     [gameId: string]: {
       [date: string]: number[];
-    }
-  };
-  prizeSettings: {
-    [gameId: string]: {
-      tier1: number;
-      tier2: number;
-      tier3: number;
     }
   };
 }
