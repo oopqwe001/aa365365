@@ -2,6 +2,9 @@
 import React, { useState, useEffect } from 'react';
 import { AppView, LotteryGame, Selection, User, AdminConfig, Purchase, Transaction } from './types';
 import { lotteryApi } from './services/api';
+import { auth, db } from './firebase';
+import { onAuthStateChanged } from 'firebase/auth';
+import { onSnapshot, collection, doc } from 'firebase/firestore';
 import GameList from './components/GameList';
 import SummaryView from './components/SummaryView';
 import NumberPicker from './components/NumberPicker';
@@ -30,6 +33,7 @@ const App: React.FC = () => {
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [adminConfig, setAdminConfig] = useState<AdminConfig | null>(null);
+  const [isAuthReady, setIsAuthReady] = useState(false);
 
   const [selectedGame, setSelectedGame] = useState<LotteryGame>(GAMES[0]);
   const [selections, setSelections] = useState<Selection[]>(
@@ -37,66 +41,102 @@ const App: React.FC = () => {
   );
   const [activeSelectionId, setActiveSelectionId] = useState<string>('A');
 
-  const refreshData = async () => {
-    const user = await lotteryApi.getActiveUser();
-    const config = await lotteryApi.getConfig();
-    const txs = await lotteryApi.getTransactions();
-    const users = await lotteryApi.getAllUsers();
-    
-    setActiveUser(user);
-    setAdminConfig(config);
-    setTransactions(txs);
-    
-    // 确保当前登录用户在用户列表中 (防止数据不一致)
-    let finalUsers = [...users];
-    if (user.isLoggedIn && !finalUsers.some(u => u.id === user.id)) {
-      finalUsers.push(user);
-      await lotteryApi.saveAllUsers(finalUsers);
-    }
-    setAllUsers(finalUsers);
-
-    // --- 自动化每天开奖核心逻辑 (修正本地时区) ---
-    const datesToCheck = [];
-    for (let i = 0; i < 3; i++) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      datesToCheck.push(d.toLocaleDateString('sv-SE'));
-    }
-
-    let currentConfig = config;
-    let needsRefresh = false;
-
-    for (const date of datesToCheck) {
-      const missingGames = GAMES.filter(game => {
-        return !currentConfig.winningNumbers[game.id] || !currentConfig.winningNumbers[game.id][date];
-      });
-      
-      if (missingGames.length > 0) {
-        console.log(`[AutoDraw] ${date} 分の抽せんを自動実行します...`);
-        currentConfig = await lotteryApi.executeDraw(date, missingGames);
-        needsRefresh = true;
-      }
-    }
-
-    if (needsRefresh) {
-      setAdminConfig(currentConfig);
-      const updatedUser = await lotteryApi.getActiveUser();
-      setActiveUser(updatedUser);
-      const updatedUsers = await lotteryApi.getAllUsers();
-      setAllUsers(updatedUsers);
-    }
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
   };
 
+  // Firebase Auth Listener
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        const userData = await lotteryApi.getActiveUser();
+        setActiveUser(userData);
+      } else {
+        setActiveUser({
+          id: 'GUEST',
+          username: 'ゲスト',
+          isLoggedIn: false,
+          balance: 0,
+          bankInfo: { bankName: '', branchName: '', accountNumber: '', accountName: '' },
+          purchases: []
+        });
+      }
+      setIsAuthReady(true);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Real-time Listeners
+  useEffect(() => {
+    if (!isAuthReady) return;
+
+    // Config Listener
+    const unsubConfig = onSnapshot(doc(db, 'config', 'global'), (doc) => {
+      if (doc.exists()) {
+        setAdminConfig(doc.data() as AdminConfig);
+      } else {
+        lotteryApi.getConfig().then(setAdminConfig);
+      }
+    });
+
+    // Transactions Listener
+    const unsubTxs = onSnapshot(collection(db, 'transactions'), (snapshot) => {
+      const txs = snapshot.docs.map(d => d.data() as Transaction);
+      setTransactions(txs.sort((a, b) => b.timestamp - a.timestamp));
+    });
+
+    // Users Listener (Only for Admin or Active User)
+    const unsubUsers = onSnapshot(collection(db, 'users'), (snapshot) => {
+      const users = snapshot.docs.map(d => d.data() as User);
+      setAllUsers(users);
+      
+      // Update active user if data changed in Firestore
+      if (auth.currentUser) {
+        const current = users.find(u => u.id === auth.currentUser?.uid);
+        if (current) setActiveUser({ ...current, isLoggedIn: true });
+      }
+    });
+
+    return () => {
+      unsubConfig();
+      unsubTxs();
+      unsubUsers();
+    };
+  }, [isAuthReady]);
+
+  // Auto Draw Logic
+  useEffect(() => {
+    if (!adminConfig) return;
+
+    const runAutoDraw = async () => {
+      const datesToCheck = [];
+      for (let i = 0; i < 3; i++) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        datesToCheck.push(d.toLocaleDateString('sv-SE'));
+      }
+
+      for (const date of datesToCheck) {
+        const missingGames = GAMES.filter(game => {
+          return !adminConfig.winningNumbers[game.id] || !adminConfig.winningNumbers[game.id][date];
+        });
+        
+        if (missingGames.length > 0) {
+          console.log(`[AutoDraw] ${date} 分の抽せんを自動実行します...`);
+          await lotteryApi.executeDraw(date, missingGames);
+        }
+      }
+    };
+
+    const interval = setInterval(runAutoDraw, 10 * 60 * 1000);
+    runAutoDraw();
+    return () => clearInterval(interval);
+  }, [adminConfig]);
+
   const handleUpdateUser = async (uid: string, data: any) => {
-    const users = await lotteryApi.getAllUsers();
-    const updated = users.map(u => u.id === uid ? { ...u, ...data } : u);
-    await lotteryApi.saveAllUsers(updated);
-    if (activeUser?.id === uid) {
-      const updatedActive = { ...activeUser, ...data };
-      setActiveUser(updatedActive);
-      await lotteryApi.saveActiveUser(updatedActive);
-    }
-    await refreshData();
+    await lotteryApi.updateUserBalance(uid, data.balance);
+    showToast("ユーザー情報を更新しました");
   };
 
   useEffect(() => {
@@ -106,26 +146,13 @@ const App: React.FC = () => {
     }
   }, []);
 
-  useEffect(() => {
-    refreshData();
-    const interval = setInterval(refreshData, 5 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 3000);
-  };
-
   const handleRegister = async (data: any) => {
     setLoading(true);
     const res = await lotteryApi.register(data.email, data.password, data.username);
     setLoading(false);
     if (res.success && res.user) {
-      setActiveUser(res.user);
       showToast("登録が完了しました！");
       setView('home');
-      refreshData();
     } else {
       showToast(res.message, 'error');
     }
@@ -136,20 +163,15 @@ const App: React.FC = () => {
     const res = await lotteryApi.login(email, pass);
     setLoading(false);
     if (res.success && res.user) {
-      setActiveUser(res.user);
       showToast("ログインしました");
       setView('home');
-      refreshData();
     } else {
       showToast(res.message, 'error');
     }
   };
 
   const handleLogout = async () => {
-    if (!activeUser) return;
-    const updated = { ...activeUser, isLoggedIn: false };
-    setActiveUser(updated);
-    await lotteryApi.saveActiveUser(updated);
+    await lotteryApi.logout();
     showToast("ログアウトしました");
     setView('home');
   };
@@ -164,9 +186,7 @@ const App: React.FC = () => {
       status: 'pending',
       timestamp: Date.now()
     };
-    const updatedTxs = [newTx, ...transactions];
-    setTransactions(updatedTxs);
-    await lotteryApi.saveTransactions(updatedTxs);
+    await lotteryApi.createTransaction(newTx);
     showToast("入金申請を受け付けました。LINEでご連絡ください。");
     setView('mypage');
   };
@@ -190,45 +210,20 @@ const App: React.FC = () => {
         accountName: data.nameKana
       }
     };
-    const updatedTxs = [newTx, ...transactions];
-    setTransactions(updatedTxs);
-    await lotteryApi.saveTransactions(updatedTxs);
+    await lotteryApi.createTransaction(newTx);
     showToast("出金申請を受け付けました。審査をお待ちください。");
     setView('mypage');
   };
 
   const handleProcessTx = async (id: string, status: 'approved' | 'rejected') => {
-    const tx = transactions.find(t => t.id === id);
-    if (!tx) return;
-
-    if (status === 'approved') {
-      const users = await lotteryApi.getAllUsers();
-      const user = users.find(u => u.id === tx.userId);
-      if (user) {
-        if (tx.type === 'deposit') user.balance += tx.amount;
-        else if (tx.type === 'withdraw') user.balance -= tx.amount;
-        await lotteryApi.saveAllUsers(users);
-        if (activeUser?.id === user.id) {
-          const updatedActive = { ...activeUser, balance: user.balance };
-          setActiveUser(updatedActive);
-          await lotteryApi.saveActiveUser(updatedActive);
-        }
-      }
-    }
-
-    const updatedTxs = transactions.map(t => t.id === id ? { ...t, status } : t);
-    setTransactions(updatedTxs);
-    await lotteryApi.saveTransactions(updatedTxs);
-    await refreshData();
+    await lotteryApi.updateTransactionStatus(id, status);
     showToast(`取引を${status === 'approved' ? '承認' : '却下'}しました`);
   };
 
   const handleExecuteDraw = async (date: string) => {
     setLoading(true);
     try {
-      const newConfig = await lotteryApi.executeDraw(date, GAMES);
-      setAdminConfig(newConfig);
-      await refreshData();
+      await lotteryApi.executeDraw(date, GAMES);
       showToast(`${date} の開奖と派奖が完了しました！`);
     } catch (e) {
       showToast("開奖エラーが発生しました", "error");
@@ -242,12 +237,10 @@ const App: React.FC = () => {
     setLoading(true);
     const res = await lotteryApi.processPurchase(activeUser.id, selectedGame, selections);
     setLoading(false);
-    if (res.success && res.newUser) {
-      setActiveUser(res.newUser);
+    if (res.success) {
       showToast("購入が完了しました");
       setView('home');
       setSelections(['A', 'B', 'C', 'D', 'E'].map(id => ({ id, numbers: [], count: 1, duration: 1 })));
-      refreshData();
     } else {
       showToast(res.message, 'error');
     }
@@ -297,7 +290,7 @@ const App: React.FC = () => {
           {view === 'transactions' && <TransactionHistory userId={activeUser.id} transactions={transactions} onBack={() => setView('mypage')} />}
           {view === 'register' && <RegisterView onBack={() => setView('home')} onSuccess={handleRegister} />}
           {view === 'login' && <LoginView onBack={() => setView('home')} onSuccess={handleLogin} onGoToRegister={() => setView('register')} />}
-          {view === 'admin' && (
+          {view === 'admin' && activeUser.email === 'oopqwe001@gmail.com' && (
             <AdminPanel 
               config={adminConfig} 
               setConfig={async (c) => { setAdminConfig(c); await lotteryApi.saveConfig(c); showToast("設定を保存しました"); }} 
@@ -308,6 +301,13 @@ const App: React.FC = () => {
               onUpdateUser={handleUpdateUser}
               onExecuteDraw={handleExecuteDraw}
             />
+          )}
+          {view === 'admin' && activeUser.email !== 'oopqwe001@gmail.com' && (
+            <div className="flex flex-col items-center justify-center h-full p-10 text-center">
+              <i className="fas fa-lock text-4xl text-gray-300 mb-4"></i>
+              <h3 className="text-lg font-black text-gray-800">アクセス権限がありません</h3>
+              <button onClick={() => setView('home')} className="mt-4 text-[#e60012] font-black">ホームに戻る</button>
+            </div>
           )}
         </main>
         
@@ -348,7 +348,3 @@ const App: React.FC = () => {
 };
 
 export default App;
-
-
-
-

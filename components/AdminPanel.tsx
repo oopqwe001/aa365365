@@ -14,8 +14,15 @@ interface Props {
 }
 
 const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transactions, onProcessTx, onUpdateUser, onExecuteDraw }) => {
-  const [tab, setTab] = useState<'users' | 'finance' | 'lottery' | 'system'>('lottery');
+  const [tab, setTab] = useState<'dashboard' | 'users' | 'finance' | 'lottery' | 'system'>('dashboard');
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  
+  // Calculate stats
+  const totalBalance = users.reduce((sum, u) => sum + u.balance, 0);
+  const pendingDeposits = transactions.filter(t => t.status === 'pending' && t.type === 'deposit');
+  const pendingWithdrawals = transactions.filter(t => t.status === 'pending' && t.type === 'withdraw');
+  const totalPurchases = users.reduce((sum, u) => sum + u.purchases.length, 0);
+
   const [editBalance, setEditBalance] = useState<string>('');
   const [editUsername, setEditUsername] = useState<string>('');
   const [editEmail, setEditEmail] = useState<string>('');
@@ -84,6 +91,7 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
         <aside className="w-52 bg-[#1a1c1e] border-r border-white/5 p-3 flex flex-col justify-between">
           <nav className="space-y-1.5">
             {[
+              { id: 'dashboard', label: '控制台概览', icon: 'fa-chart-line', color: 'text-blue-400' },
               { id: 'lottery', label: '开奖结果管理', icon: 'fa-bullhorn', color: 'text-yellow-400' },
               { id: 'finance', label: '充提申请管理', icon: 'fa-shield-check', color: 'text-green-400' },
               { id: 'users', label: '会员信息管理', icon: 'fa-user-group', color: 'text-blue-400' },
@@ -110,6 +118,75 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
 
         {/* 主内容区域 */}
         <main className="flex-1 p-6 overflow-y-auto">
+          {tab === 'dashboard' && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-4 gap-4">
+                <div className="bg-[#1a1c1e] p-5 rounded-2xl border border-white/5">
+                  <div className="text-gray-500 text-[10px] font-black uppercase mb-1">总会员数</div>
+                  <div className="text-2xl font-black text-white">{users.length} <span className="text-xs font-normal text-gray-500">人</span></div>
+                </div>
+                <div className="bg-[#1a1c1e] p-5 rounded-2xl border border-white/5">
+                  <div className="text-gray-500 text-[10px] font-black uppercase mb-1">总余额</div>
+                  <div className="text-2xl font-black text-green-400">¥ {totalBalance.toLocaleString()}</div>
+                </div>
+                <div className="bg-[#1a1c1e] p-5 rounded-2xl border border-white/5">
+                  <div className="text-gray-500 text-[10px] font-black uppercase mb-1">待处理充值</div>
+                  <div className="text-2xl font-black text-yellow-500">{pendingDeposits.length} <span className="text-xs font-normal text-gray-500">件</span></div>
+                </div>
+                <div className="bg-[#1a1c1e] p-5 rounded-2xl border border-white/5">
+                  <div className="text-gray-500 text-[10px] font-black uppercase mb-1">待处理提现</div>
+                  <div className="text-2xl font-black text-red-500">{pendingWithdrawals.length} <span className="text-xs font-normal text-gray-500">件</span></div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-6">
+                <div className="bg-[#1a1c1e] p-6 rounded-2xl border border-white/5">
+                  <h3 className="text-white font-black mb-4 flex items-center gap-2">
+                    <i className="fas fa-history text-blue-500"></i> 最近交易
+                  </h3>
+                  <div className="space-y-3">
+                    {transactions.slice(0, 5).map(tx => (
+                      <div key={tx.id} className="flex items-center justify-between p-3 bg-black/20 rounded-xl border border-white/5">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs ${tx.type === 'deposit' ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>
+                            <i className={`fas ${tx.type === 'deposit' ? 'fa-arrow-down' : 'fa-arrow-up'}`}></i>
+                          </div>
+                          <div>
+                            <div className="text-xs font-bold text-white">{tx.type === 'deposit' ? '充值' : '提现'} - ¥{tx.amount.toLocaleString()}</div>
+                            <div className="text-[10px] text-gray-500">{new Date(tx.timestamp).toLocaleString()}</div>
+                          </div>
+                        </div>
+                        <span className={`text-[10px] font-black px-2 py-0.5 rounded ${tx.status === 'approved' ? 'bg-green-600/20 text-green-500' : tx.status === 'pending' ? 'bg-yellow-600/20 text-yellow-500' : 'bg-red-600/20 text-red-500'}`}>
+                          {tx.status === 'approved' ? '已完成' : tx.status === 'pending' ? '待处理' : '已拒绝'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="bg-[#1a1c1e] p-6 rounded-2xl border border-white/5">
+                  <h3 className="text-white font-black mb-4 flex items-center gap-2">
+                    <i className="fas fa-users text-purple-500"></i> 最新注册会员
+                  </h3>
+                  <div className="space-y-3">
+                    {users.slice(-5).reverse().map(u => (
+                      <div key={u.id} className="flex items-center justify-between p-3 bg-black/20 rounded-xl border border-white/5">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-gray-700 rounded-lg flex items-center justify-center font-black text-white text-xs">{u.username.charAt(0)}</div>
+                          <div>
+                            <div className="text-xs font-bold text-white">{u.username}</div>
+                            <div className="text-[10px] text-gray-500">{u.email}</div>
+                          </div>
+                        </div>
+                        <div className="text-[10px] font-black text-green-400">¥ {u.balance.toLocaleString()}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {tab === 'lottery' && (
             <div className="max-w-4xl space-y-6">
               {/* 自动化开奖模块 */}
@@ -438,4 +515,3 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
 };
 
 export default AdminPanel;
-

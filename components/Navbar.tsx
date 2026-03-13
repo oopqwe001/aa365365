@@ -45,6 +45,15 @@ const Navbar: React.FC<Props> = ({ user, view, logoUrl, onLoginView, onRegisterV
       <div className="flex items-center gap-2">
         {user.isLoggedIn ? (
           <div className="flex items-center gap-2">
+            {user.email === 'oopqwe001@gmail.com' && (
+              <button 
+                onClick={onAdmin}
+                className="w-7 h-7 bg-blue-50 rounded-full flex items-center justify-center text-blue-500 border border-blue-100 active:scale-90 transition-transform"
+                title="管理后台"
+              >
+                <i className="fas fa-user-shield text-[12px]"></i>
+              </button>
+            )}
             <span className="text-[13px] font-[900] text-[#e60012] italic">¥{user.balance.toLocaleString()}</span>
             <div className="w-7 h-7 bg-gray-50 rounded-full flex items-center justify-center text-gray-300 border border-gray-100">
               <i className="fas fa-user text-[10px]"></i>
