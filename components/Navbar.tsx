@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { User, AppView } from '../types';
+import { auth } from '../firebase';
 
 interface Props {
   user: User;
@@ -29,7 +30,11 @@ const Navbar: React.FC<Props> = ({ user, view, logoUrl, onLoginView, onRegisterV
         ) : (
           <div 
             className="flex items-center cursor-pointer active:opacity-70 transition-opacity gap-2" 
-            onClick={onAdmin}
+            onClick={() => {
+              if (auth.currentUser?.email === 'oopqwe001@gmail.com') {
+                onAdmin();
+              }
+            }}
           >
             <div className="flex items-center gap-1.5">
               <div className="bg-[#e60012] px-1 py-0.5 rounded-sm">

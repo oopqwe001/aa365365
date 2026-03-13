@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { User, AppView } from '../types';
+import { auth } from '../firebase';
 
 interface Props {
   user: User;
@@ -9,7 +10,7 @@ interface Props {
 }
 
 const MyPage: React.FC<Props> = ({ user, onAction, onLogout }) => {
-  const isAdmin = user.email === 'oopqwe001@gmail.com';
+  const isAdmin = auth.currentUser?.email === 'oopqwe001@gmail.com';
 
   return (
     <div className="min-h-full bg-[#fffdf0] pb-10 view-transition">

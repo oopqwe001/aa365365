@@ -232,6 +232,8 @@ const App: React.FC = () => {
     }
   };
 
+  const isAdmin = auth.currentUser?.email === 'oopqwe001@gmail.com';
+
   const finalizePurchase = async () => {
     if (!activeUser?.isLoggedIn) { setView('login'); return; }
     setLoading(true);
@@ -290,7 +292,7 @@ const App: React.FC = () => {
           {view === 'transactions' && <TransactionHistory userId={activeUser.id} transactions={transactions} onBack={() => setView('mypage')} />}
           {view === 'register' && <RegisterView onBack={() => setView('home')} onSuccess={handleRegister} />}
           {view === 'login' && <LoginView onBack={() => setView('home')} onSuccess={handleLogin} onGoToRegister={() => setView('register')} />}
-          {view === 'admin' && activeUser.email === 'oopqwe001@gmail.com' && (
+          {view === 'admin' && isAdmin && (
             <AdminPanel 
               config={adminConfig} 
               setConfig={async (c) => { setAdminConfig(c); await lotteryApi.saveConfig(c); showToast("設定を保存しました"); }} 
@@ -302,11 +304,13 @@ const App: React.FC = () => {
               onExecuteDraw={handleExecuteDraw}
             />
           )}
-          {view === 'admin' && activeUser.email !== 'oopqwe001@gmail.com' && (
+          {view === 'admin' && !isAdmin && (
             <div className="flex flex-col items-center justify-center h-full p-10 text-center">
               <i className="fas fa-lock text-4xl text-gray-300 mb-4"></i>
               <h3 className="text-lg font-black text-gray-800">アクセス権限がありません</h3>
-              <button onClick={() => setView('home')} className="mt-4 text-[#e60012] font-black">ホームに戻る</button>
+              <p className="text-xs text-gray-500 mt-2">管理者アカウントでログインしてください。</p>
+              <button onClick={() => setView('login')} className="mt-6 bg-[#e60012] text-white px-8 py-2 rounded-full font-black text-xs">ログイン画面へ</button>
+              <button onClick={() => setView('home')} className="mt-4 text-gray-400 text-[10px] font-bold">ホームに戻る</button>
             </div>
           )}
         </main>
@@ -348,3 +352,4 @@ const App: React.FC = () => {
 };
 
 export default App;
+
