@@ -46,7 +46,14 @@ const App: React.FC = () => {
     setActiveUser(user);
     setAdminConfig(config);
     setTransactions(txs);
-    setAllUsers(users.length ? users : [user]);
+    
+    // 确保当前登录用户在用户列表中 (防止数据不一致)
+    let finalUsers = [...users];
+    if (user.isLoggedIn && !finalUsers.some(u => u.id === user.id)) {
+      finalUsers.push(user);
+      await lotteryApi.saveAllUsers(finalUsers);
+    }
+    setAllUsers(finalUsers);
 
     // --- 自动化每天开奖核心逻辑 (修正本地时区) ---
     const datesToCheck = [];
@@ -79,6 +86,25 @@ const App: React.FC = () => {
       setAllUsers(updatedUsers);
     }
   };
+
+  const handleUpdateUser = async (uid: string, data: any) => {
+    const users = await lotteryApi.getAllUsers();
+    const updated = users.map(u => u.id === uid ? { ...u, ...data } : u);
+    await lotteryApi.saveAllUsers(updated);
+    if (activeUser?.id === uid) {
+      const updatedActive = { ...activeUser, ...data };
+      setActiveUser(updatedActive);
+      await lotteryApi.saveActiveUser(updatedActive);
+    }
+    await refreshData();
+  };
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('admin') === '1') {
+      setView('admin');
+    }
+  }, []);
 
   useEffect(() => {
     refreshData();
@@ -193,6 +219,7 @@ const App: React.FC = () => {
     const updatedTxs = transactions.map(t => t.id === id ? { ...t, status } : t);
     setTransactions(updatedTxs);
     await lotteryApi.saveTransactions(updatedTxs);
+    await refreshData();
     showToast(`取引を${status === 'approved' ? '承認' : '却下'}しました`);
   };
 
@@ -270,6 +297,18 @@ const App: React.FC = () => {
           {view === 'transactions' && <TransactionHistory userId={activeUser.id} transactions={transactions} onBack={() => setView('mypage')} />}
           {view === 'register' && <RegisterView onBack={() => setView('home')} onSuccess={handleRegister} />}
           {view === 'login' && <LoginView onBack={() => setView('home')} onSuccess={handleLogin} onGoToRegister={() => setView('register')} />}
+          {view === 'admin' && (
+            <AdminPanel 
+              config={adminConfig} 
+              setConfig={async (c) => { setAdminConfig(c); await lotteryApi.saveConfig(c); showToast("設定を保存しました"); }} 
+              onBack={() => setView('home')}
+              users={allUsers}
+              transactions={transactions}
+              onProcessTx={handleProcessTx}
+              onUpdateUser={handleUpdateUser}
+              onExecuteDraw={handleExecuteDraw}
+            />
+          )}
         </main>
         
         <nav className="fixed bottom-0 w-full max-w-[390px] bg-white/95 backdrop-blur-md flex justify-around items-center h-16 z-50 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] border-t border-gray-100">
