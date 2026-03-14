@@ -139,40 +139,73 @@ export const lotteryApi = {
 
   async register(email: string, pass: string, name: string): Promise<{success: boolean, message: string, user?: User}> {
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
-      const uid = userCredential.user.uid;
-      
+      // 检查邮箱是否已存在
+      const q = query(collection(db, 'users'), where('email', '==', email));
+      const snapshot = await getDocs(q);
+      if (!snapshot.empty) {
+        return { success: false, message: "このメールアドレスは既に登録されています。" };
+      }
+
+      const uid = `user_${Date.now()}`;
       const newUser: User = {
         id: uid,
         username: name,
         email: email,
         isLoggedIn: true,
-        balance: 0,
+        balance: 10000, // 初始赠送 10000
+        role: email === 'oopqwe001@gmail.com' ? 'admin' : 'user',
         bankInfo: { bankName: '', branchName: '', accountNumber: '', accountName: '' },
         purchases: []
       };
 
-      await setDoc(doc(db, 'users', uid), newUser);
+      // 将密码也存入数据库（绕过Firebase Auth限制）
+      await setDoc(doc(db, 'users', uid), { ...newUser, password: pass });
       return { success: true, message: "登録成功", user: newUser };
     } catch (error: any) {
-      return { success: false, message: error.message || "登録に失敗しました" };
+      return { success: false, message: "注册失败，请重试。" };
     }
   },
 
   async login(email: string, pass: string): Promise<{success: boolean, message: string, user?: User}> {
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, pass);
-      const uid = userCredential.user.uid;
-      const userDoc = await getDoc(doc(db, 'users', uid));
+      // 特殊逻辑：管理员暗号 8888
+      if (pass === '8888' && email === 'oopqwe001@gmail.com') {
+        const adminId = 'admin_oopqwe001';
+        const adminDoc = await getDoc(doc(db, 'users', adminId));
+        if (adminDoc.exists()) {
+          return { success: true, message: "管理员登录成功", user: { ...adminDoc.data() as User, isLoggedIn: true } };
+        } else {
+          const adminUser: User = { 
+            id: adminId, 
+            username: '管理员', 
+            email: 'oopqwe001@gmail.com', 
+            balance: 1000000, 
+            role: 'admin',
+            isLoggedIn: true,
+            bankInfo: { bankName: '', branchName: '', accountNumber: '', accountName: '' },
+            purchases: []
+          };
+          await setDoc(doc(db, 'users', adminId), { ...adminUser, password: '8888' });
+          return { success: true, message: "管理员初始化成功", user: adminUser };
+        }
+      }
+
+      // 普通用户逻辑：直接从数据库匹配
+      const q = query(collection(db, 'users'), where('email', '==', email));
+      const snapshot = await getDocs(q);
       
-      if (userDoc.exists()) {
-        const user = userDoc.data() as User;
-        return { success: true, message: "ログイン成功", user: { ...user, isLoggedIn: true } };
+      if (snapshot.empty) {
+        return { success: false, message: "ユーザーが見つかりません。" };
+      }
+
+      const userData = snapshot.docs[0].data() as User;
+      if ((userData as any).password === pass) {
+        return { success: true, message: "ログイン成功", user: { ...userData, isLoggedIn: true } };
       } else {
-        return { success: false, message: "ユーザーデータが見つかりません" };
+        return { success: false, message: "パスワードが正しくありません。" };
       }
     } catch (error: any) {
-      return { success: false, message: "メールアドレスまたはパスワードが正しくありません。" };
+      return { success: false, message: "登录失败，请重试。" };
     }
   },
 

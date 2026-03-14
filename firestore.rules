@@ -1,0 +1,20 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 允许所有人读取和写入，以支持“简易登录”模式
+    match /users/{userId} {
+      allow read, create, update: if true;
+    }
+
+    match /transactions/{transactionId} {
+      allow read, create, update: if true;
+      allow delete: if true;
+    }
+
+    match /config/{docId} {
+      allow read: if true;
+      allow write: if true;
+    }
+  }
+}
