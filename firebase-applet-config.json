@@ -1,0 +1,9 @@
+{
+  "apiKey": "AIzaSyAs-XXXXXXXXXXXX",
+  "authDomain": "lottery-simulation-app.firebaseapp.com",
+  "projectId": "lottery-simulation-app",
+  "storageBucket": "lottery-simulation-app.appspot.com",
+  "messagingSenderId": "488374131233",
+  "appId": "1:488374131233:web:XXXXXXXXXXXX",
+  "firestoreDatabaseId": "(default)"
+}
