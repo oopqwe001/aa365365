@@ -1,23 +1,6 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // 允许所有人读写用户信息（支持简易登录）
-    match /users/{userId} {
-      allow read, write: if true;
-    }
-
-    // 允许所有人读写交易记录
-    match /transactions/{transactionId} {
-      allow read, write: if true;
-    }
-
-    // 允许所有人读写系统配置（支持自动开奖）
-    match /config/{docId} {
-      allow read, write: if true;
-    }
-    
-    // 兜底规则：允许其他所有路径读写
     match /{path=**} {
       allow read, write: if true;
     }

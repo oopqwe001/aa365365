@@ -257,14 +257,20 @@ const App: React.FC = () => {
   const finalizePurchase = async () => {
     if (!activeUser?.isLoggedIn) { setView('login'); return; }
     setLoading(true);
-    const res = await lotteryApi.processPurchase(activeUser.id, selectedGame, selections);
-    setLoading(false);
-    if (res.success) {
-      showToast("購入が完了しました");
-      setView('home');
-      setSelections(['A', 'B', 'C', 'D', 'E'].map(id => ({ id, numbers: [], count: 1, duration: 1 })));
-    } else {
-      showToast(res.message, 'error');
+    try {
+      const res = await lotteryApi.processPurchase(activeUser.id, selectedGame, selections);
+      if (res.success) {
+        showToast("購入が完了しました");
+        setView('home');
+        setSelections(['A', 'B', 'C', 'D', 'E'].map(id => ({ id, numbers: [], count: 1, duration: 1 })));
+      } else {
+        showToast(res.message, 'error');
+      }
+    } catch (e) {
+      console.error(e);
+      showToast("通信エラーが発生しました。権限設定を確認してください。", "error");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -373,4 +379,3 @@ const App: React.FC = () => {
 };
 
 export default App;
-
