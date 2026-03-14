@@ -15,6 +15,7 @@ export interface User {
   password?: string;
   isLoggedIn: boolean;
   balance: number;
+  role?: 'admin' | 'user';
   bankInfo: BankInfo;
   purchases: Purchase[];
 }
@@ -23,7 +24,7 @@ export interface Purchase {
   id: string;
   userId: string;
   gameId: string;
-  numbers: number[][];
+  numbers: string[]; // Array of comma-separated number strings to avoid Firestore nested array error
   timestamp: number;
   isProcessed: boolean;
   status: 'pending' | 'won' | 'lost';

@@ -315,7 +315,7 @@ export const lotteryApi = {
         id: 'P' + Math.random().toString(36).substr(2, 6).toUpperCase(),
         userId: user.id,
         gameId: game.id,
-        numbers: validSelections.map(s => s.numbers),
+        numbers: validSelections.map(s => s.numbers.join(',')),
         timestamp: Date.now(),
         isProcessed: false,
         status: 'pending',
@@ -364,7 +364,8 @@ export const lotteryApi = {
           let userChanged = false;
           user.purchases.forEach(p => {
             if (p.gameId === game.id && !p.isProcessed) {
-              p.numbers.forEach(pickedNums => {
+              p.numbers.forEach(pickedNumsStr => {
+                const pickedNums = pickedNumsStr.split(',').map(Number);
                 const matchCount = pickedNums.filter(n => drawResult.includes(n)).length;
                 let prize = 0;
                 if (matchCount === game.pickCount) prize = 10000000;
