@@ -47,30 +47,19 @@ const App: React.FC = () => {
     setTimeout(() => setToast(null), 3000);
   };
 
-  // Firebase Auth Listener
+  // Auth Initialization
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        const userData = await lotteryApi.getActiveUser();
-        setActiveUser(userData);
-      } else {
-        setActiveUser({
-          id: 'GUEST',
-          username: 'ゲスト',
-          isLoggedIn: false,
-          balance: 0,
-          bankInfo: { bankName: '', branchName: '', accountNumber: '', accountName: '' },
-          purchases: []
-        });
-      }
+    const initAuth = async () => {
+      const userData = await lotteryApi.getActiveUser();
+      setActiveUser(userData);
       setIsAuthReady(true);
-    });
-    return () => unsubscribe();
+    };
+    initAuth();
   }, []);
 
   // Real-time Listeners
   useEffect(() => {
-    if (!isAuthReady) return;
+    if (!isAuthReady || !activeUser) return;
 
     // Config Listener
     const unsubConfig = onSnapshot(doc(db, 'config', 'global'), (doc) => {
@@ -87,14 +76,14 @@ const App: React.FC = () => {
       setTransactions(txs.sort((a, b) => b.timestamp - a.timestamp));
     });
 
-    // Users Listener (Only for Admin or Active User)
+    // Users Listener
     const unsubUsers = onSnapshot(collection(db, 'users'), (snapshot) => {
       const users = snapshot.docs.map(d => d.data() as User);
       setAllUsers(users);
       
       // Update active user if data changed in Firestore
-      if (auth.currentUser) {
-        const current = users.find(u => u.id === auth.currentUser?.uid);
+      if (activeUser.isLoggedIn) {
+        const current = users.find(u => u.id === activeUser.id);
         if (current) setActiveUser({ ...current, isLoggedIn: true });
       }
     });
@@ -104,36 +93,56 @@ const App: React.FC = () => {
       unsubTxs();
       unsubUsers();
     };
-  }, [isAuthReady]);
+  }, [isAuthReady, activeUser?.id]);
 
   // Auto Draw Logic
+  const isDrawingRef = React.useRef(false);
   useEffect(() => {
-    if (!adminConfig) return;
+    if (!adminConfig || isDrawingRef.current) return;
 
     const runAutoDraw = async () => {
-      const datesToCheck = [];
-      for (let i = 0; i < 3; i++) {
-        const d = new Date();
-        d.setDate(d.getDate() - i);
-        datesToCheck.push(d.toLocaleDateString('sv-SE'));
-      }
+      if (isDrawingRef.current) return;
+      isDrawingRef.current = true;
 
-      for (const date of datesToCheck) {
-        const missingGames = GAMES.filter(game => {
-          return !adminConfig.winningNumbers[game.id] || !adminConfig.winningNumbers[game.id][date];
-        });
+      try {
+        // 使用日本标准时间 (JST) 进行判断
+        const jstNow = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Tokyo"}));
+        const jstHour = jstNow.getHours();
+        const jstTodayStr = jstNow.toLocaleDateString('sv-SE'); // YYYY-MM-DD in JST
         
-        if (missingGames.length > 0) {
-          console.log(`[AutoDraw] ${date} 分の抽せんを自動実行します...`);
-          await lotteryApi.executeDraw(date, missingGames);
+        const datesToCheck = [];
+        // 检查过去 3 天
+        for (let i = 1; i <= 3; i++) {
+          const d = new Date(jstNow);
+          d.setDate(d.getDate() - i);
+          datesToCheck.push(d.toLocaleDateString('sv-SE'));
         }
+        
+        if (jstHour >= 9) {
+          datesToCheck.push(jstTodayStr);
+        }
+
+        for (const date of datesToCheck) {
+          const missingGames = GAMES.filter(game => {
+            return !adminConfig.winningNumbers[game.id] || !adminConfig.winningNumbers[game.id][date];
+          });
+          
+          if (missingGames.length > 0) {
+            console.log(`[AutoDraw] ${date} 分の抽せんを自動実行します...`);
+            await lotteryApi.executeDraw(date, missingGames);
+          }
+        }
+      } catch (e) {
+        console.error("AutoDraw Error:", e);
+      } finally {
+        isDrawingRef.current = false;
       }
     };
 
     const interval = setInterval(runAutoDraw, 10 * 60 * 1000);
     runAutoDraw();
     return () => clearInterval(interval);
-  }, [adminConfig]);
+  }, [adminConfig?.winningNumbers]); // Only depend on winningNumbers to reduce unnecessary triggers
 
   const handleUpdateUser = async (uid: string, data: any) => {
     await lotteryApi.updateUserBalance(uid, data.balance);
@@ -153,6 +162,7 @@ const App: React.FC = () => {
     setLoading(false);
     if (res.success && res.user) {
       showToast("登録が完了しました！");
+      setActiveUser(res.user);
       setView('home');
     } else {
       showToast(res.message, 'error');
@@ -165,6 +175,7 @@ const App: React.FC = () => {
     setLoading(false);
     if (res.success && res.user) {
       showToast("ログインしました");
+      setActiveUser(res.user);
       setView('home');
     } else {
       showToast(res.message, 'error');
@@ -173,6 +184,14 @@ const App: React.FC = () => {
 
   const handleLogout = async () => {
     await lotteryApi.logout();
+    setActiveUser({
+      id: 'GUEST',
+      username: 'ゲスト',
+      isLoggedIn: false,
+      balance: 0,
+      bankInfo: { bankName: '', branchName: '', accountNumber: '', accountName: '' },
+      purchases: []
+    });
     showToast("ログアウトしました");
     setView('home');
   };
@@ -233,7 +252,7 @@ const App: React.FC = () => {
     }
   };
 
-  const isAdmin = auth.currentUser?.email === 'oopqwe001@gmail.com';
+  const isAdmin = activeUser?.role === 'admin';
 
   const finalizePurchase = async () => {
     if (!activeUser?.isLoggedIn) { setView('login'); return; }
@@ -354,3 +373,4 @@ const App: React.FC = () => {
 };
 
 export default App;
+

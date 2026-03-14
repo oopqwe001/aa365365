@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 import { User, AppView } from '../types';
 import { auth } from '../services/firebase';
@@ -31,7 +32,7 @@ const Navbar: React.FC<Props> = ({ user, view, logoUrl, onLoginView, onRegisterV
           <div 
             className="flex items-center cursor-pointer active:opacity-70 transition-opacity gap-2" 
             onClick={() => {
-              if (auth.currentUser?.email === 'oopqwe001@gmail.com') {
+              if (user.role === 'admin') {
                 onAdmin();
               }
             }}

@@ -96,50 +96,32 @@ const generateRandomNumbers = (count: number, max: number): number[] => {
 
 export const lotteryApi = {
   async getActiveUser(): Promise<User> {
-    const currentUser = auth.currentUser;
-    if (!currentUser) {
-      return {
-        id: 'GUEST',
-        username: 'ゲスト',
-        isLoggedIn: false,
-        balance: 0,
-        bankInfo: { bankName: '', branchName: '', accountNumber: '', accountName: '' },
-        purchases: []
-      };
-    }
-
-    try {
-      const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
-      if (userDoc.exists()) {
-        return { ...userDoc.data() as User, isLoggedIn: true };
+    const savedUser = localStorage.getItem('lottery_user');
+    if (savedUser) {
+      try {
+        const user = JSON.parse(savedUser) as User;
+        // 验证数据库中是否还存在
+        const userDoc = await getDoc(doc(db, 'users', user.id));
+        if (userDoc.exists()) {
+          return { ...userDoc.data() as User, isLoggedIn: true };
+        }
+      } catch (e) {
+        localStorage.removeItem('lottery_user');
       }
-      return {
-        id: currentUser.uid,
-        username: currentUser.displayName || 'ユーザー',
-        isLoggedIn: true,
-        balance: 0,
-        bankInfo: { bankName: '', branchName: '', accountNumber: '', accountName: '' },
-        purchases: []
-      };
-    } catch (error) {
-      handleFirestoreError(error, OperationType.GET, `users/${currentUser.uid}`);
-      throw error;
     }
-  },
 
-  async getAllUsers(): Promise<User[]> {
-    try {
-      const snapshot = await getDocs(collection(db, 'users'));
-      return snapshot.docs.map(d => ({ ...d.data() as User, isLoggedIn: false }));
-    } catch (error) {
-      handleFirestoreError(error, OperationType.LIST, 'users');
-      throw error;
-    }
+    return {
+      id: 'GUEST',
+      username: 'ゲスト',
+      isLoggedIn: false,
+      balance: 0,
+      bankInfo: { bankName: '', branchName: '', accountNumber: '', accountName: '' },
+      purchases: []
+    };
   },
 
   async register(email: string, pass: string, name: string): Promise<{success: boolean, message: string, user?: User}> {
     try {
-      // 检查邮箱是否已存在
       const q = query(collection(db, 'users'), where('email', '==', email));
       const snapshot = await getDocs(q);
       if (!snapshot.empty) {
@@ -152,14 +134,14 @@ export const lotteryApi = {
         username: name,
         email: email,
         isLoggedIn: true,
-        balance: 10000, // 初始赠送 10000
+        balance: 10000,
         role: email === 'oopqwe001@gmail.com' ? 'admin' : 'user',
         bankInfo: { bankName: '', branchName: '', accountNumber: '', accountName: '' },
         purchases: []
       };
 
-      // 将密码也存入数据库（绕过Firebase Auth限制）
       await setDoc(doc(db, 'users', uid), { ...newUser, password: pass });
+      localStorage.setItem('lottery_user', JSON.stringify(newUser));
       return { success: true, message: "登録成功", user: newUser };
     } catch (error: any) {
       return { success: false, message: "注册失败，请重试。" };
@@ -168,14 +150,14 @@ export const lotteryApi = {
 
   async login(email: string, pass: string): Promise<{success: boolean, message: string, user?: User}> {
     try {
-      // 特殊逻辑：管理员暗号 8888
       if (pass === '8888' && email === 'oopqwe001@gmail.com') {
         const adminId = 'admin_oopqwe001';
         const adminDoc = await getDoc(doc(db, 'users', adminId));
+        let adminUser: User;
         if (adminDoc.exists()) {
-          return { success: true, message: "管理员登录成功", user: { ...adminDoc.data() as User, isLoggedIn: true } };
+          adminUser = { ...adminDoc.data() as User, isLoggedIn: true };
         } else {
-          const adminUser: User = { 
+          adminUser = { 
             id: adminId, 
             username: '管理员', 
             email: 'oopqwe001@gmail.com', 
@@ -186,11 +168,11 @@ export const lotteryApi = {
             purchases: []
           };
           await setDoc(doc(db, 'users', adminId), { ...adminUser, password: '8888' });
-          return { success: true, message: "管理员初始化成功", user: adminUser };
         }
+        localStorage.setItem('lottery_user', JSON.stringify(adminUser));
+        return { success: true, message: "管理员登录成功", user: adminUser };
       }
 
-      // 普通用户逻辑：直接从数据库匹配
       const q = query(collection(db, 'users'), where('email', '==', email));
       const snapshot = await getDocs(q);
       
@@ -200,7 +182,9 @@ export const lotteryApi = {
 
       const userData = snapshot.docs[0].data() as User;
       if ((userData as any).password === pass) {
-        return { success: true, message: "ログイン成功", user: { ...userData, isLoggedIn: true } };
+        const user = { ...userData, isLoggedIn: true };
+        localStorage.setItem('lottery_user', JSON.stringify(user));
+        return { success: true, message: "ログイン成功", user };
       } else {
         return { success: false, message: "パスワードが正しくありません。" };
       }
@@ -210,7 +194,7 @@ export const lotteryApi = {
   },
 
   async logout() {
-    await signOut(auth);
+    localStorage.removeItem('lottery_user');
   },
 
   async sendPasswordReset(email: string): Promise<{success: boolean, message: string}> {
