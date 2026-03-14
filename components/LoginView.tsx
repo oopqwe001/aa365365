@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import { lotteryApi } from '@/services/api';
 
 interface Props {
   onBack: () => void;
@@ -10,11 +11,23 @@ interface Props {
 const LoginView: React.FC<Props> = ({ onBack, onSuccess, onGoToRegister }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [message, setMessage] = useState<{ text: string, type: 'error' | 'success' } | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSuccess(email, password);
+  };
+
+  const handleResetPassword = async () => {
+    if (!email) {
+      setMessage({ text: 'メールアドレスを入力してください。', type: 'error' });
+      return;
+    }
+    setLoading(true);
+    const res = await lotteryApi.sendPasswordReset(email);
+    setMessage({ text: res.message, type: res.success ? 'success' : 'error' });
+    setLoading(false);
   };
 
   return (
@@ -25,6 +38,12 @@ const LoginView: React.FC<Props> = ({ onBack, onSuccess, onGoToRegister }) => {
         </div>
         <h2 className="text-xl font-black text-gray-800 tracking-tight">おかえりなさい！</h2>
       </div>
+
+      {message && (
+        <div className={`mb-6 p-4 rounded-xl text-xs font-bold ${message.type === 'success' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
+          {message.text}
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
@@ -39,7 +58,17 @@ const LoginView: React.FC<Props> = ({ onBack, onSuccess, onGoToRegister }) => {
         </div>
 
         <div>
-          <label className="block text-[11px] font-black text-gray-500 mb-2 uppercase tracking-wider">パスワード</label>
+          <div className="flex justify-between items-center mb-2">
+            <label className="block text-[11px] font-black text-gray-500 uppercase tracking-wider">パスワード</label>
+            <button 
+              type="button" 
+              onClick={handleResetPassword}
+              disabled={loading}
+              className="text-[10px] font-black text-blue-600 hover:underline disabled:opacity-50"
+            >
+              パスワードを忘れた場合
+            </button>
+          </div>
           <input 
             type="password" 
             className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-4 text-sm font-bold outline-none focus:ring-2 ring-red-100 transition-all"

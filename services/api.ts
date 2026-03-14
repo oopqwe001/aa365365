@@ -18,7 +18,8 @@ import {
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword,
   signOut,
-  onAuthStateChanged
+  onAuthStateChanged,
+  sendPasswordResetEmail
 } from 'firebase/auth';
 
 enum OperationType {
@@ -177,6 +178,15 @@ export const lotteryApi = {
 
   async logout() {
     await signOut(auth);
+  },
+
+  async sendPasswordReset(email: string): Promise<{success: boolean, message: string}> {
+    try {
+      await sendPasswordResetEmail(auth, email);
+      return { success: true, message: "パスワード再設定メールを送信しました。" };
+    } catch (error: any) {
+      return { success: false, message: "メール送信に失敗しました。メールアドレスを確認してください。" };
+    }
   },
 
   async getTransactions(): Promise<Transaction[]> {
@@ -373,4 +383,3 @@ export const lotteryApi = {
     }
   }
 };
-
