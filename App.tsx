@@ -5,20 +5,20 @@ import { lotteryApi } from './services/api';
 import { auth, db } from './services/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { onSnapshot, collection, doc } from 'firebase/firestore';
-import GameList from './components/GameList';
-import SummaryView from './components/SummaryView';
-import NumberPicker from './components/NumberPicker';
-import MyPage from './components/MyPage';
-import AdminPanel from './components/AdminPanel';
-import Navbar from './components/Navbar';
-import CustomerService from './components/CustomerService';
-import DrawHistory from './components/DrawHistory';
-import WithdrawForm from './components/WithdrawForm';
-import DepositView from './components/DepositView';
-import TransactionHistory from './components/TransactionHistory';
-import PurchaseHistory from './components/PurchaseHistory';
-import RegisterView from './components/RegisterView';
-import LoginView from './components/LoginView';
+import GameList from '@/components/GameList';
+import SummaryView from '@/components/SummaryView';
+import NumberPicker from '@/components/NumberPicker';
+import MyPage from '@/components/MyPage';
+import AdminPanel from '@/components/AdminPanel';
+import Navbar from '@/components/Navbar';
+import CustomerService from '@/components/CustomerService';
+import DrawHistory from '@/components/DrawHistory';
+import WithdrawForm from '@/components/WithdrawForm';
+import DepositView from '@/components/DepositView';
+import TransactionHistory from '@/components/TransactionHistory';
+import PurchaseHistory from '@/components/PurchaseHistoryList';
+import RegisterView from '@/components/RegisterView';
+import LoginView from '@/components/LoginView';
 
 const GAMES: LotteryGame[] = [
   { id: 'loto7', name: 'LOTO 7', fullName: 'ロトセブン', drawDayText: '毎日', drawDayIcon: '全', maxJackpot: '12億円', price: 300, maxNumber: 37, pickCount: 7, color: '#e60012', colorSecondary: '#005bac' },
