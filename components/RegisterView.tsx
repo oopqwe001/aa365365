@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface Props {
   onBack: () => void;
@@ -7,6 +8,7 @@ interface Props {
 }
 
 const RegisterView: React.FC<Props> = ({ onBack, onSuccess }) => {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     username: '',
     email: '',
@@ -20,12 +22,12 @@ const RegisterView: React.FC<Props> = ({ onBack, onSuccess }) => {
     setError('');
 
     if (formData.password !== formData.confirmPassword) {
-      setError('パスワードが一致しません。');
+      setError(t('auth.password_mismatch'));
       return;
     }
 
     if (formData.password.length < 6) {
-      setError('パスワードは6文字以上で入力してください。');
+      setError(t('auth.password_too_short'));
       return;
     }
 
@@ -35,16 +37,16 @@ const RegisterView: React.FC<Props> = ({ onBack, onSuccess }) => {
   return (
     <div className="min-h-full bg-white p-6 view-transition">
       <div className="mb-8">
-        <h2 className="text-2xl font-black text-gray-800 mb-2 tracking-tight">新規会員登録</h2>
-        <p className="text-xs text-gray-400 font-bold">メールアドレスで簡単に登録できます。</p>
+        <h2 className="text-2xl font-black text-gray-800 mb-2 tracking-tight">{t('common.register')}</h2>
+        <p className="text-xs text-gray-400 font-bold">{t('auth.register_subtitle')}</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-5">
         <div>
-          <label className="block text-[11px] font-black text-gray-500 mb-2 uppercase tracking-wider">ニックネーム</label>
+          <label className="block text-[11px] font-black text-gray-500 mb-2 uppercase tracking-wider">{t('auth.username')}</label>
           <input 
             type="text" 
-            placeholder="山田 太郎"
+            placeholder={t('auth.username_placeholder')}
             className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-4 text-sm font-bold outline-none focus:ring-2 ring-red-100 transition-all"
             required
             value={formData.username}
@@ -53,7 +55,7 @@ const RegisterView: React.FC<Props> = ({ onBack, onSuccess }) => {
         </div>
 
         <div>
-          <label className="block text-[11px] font-black text-gray-500 mb-2 uppercase tracking-wider">メールアドレス</label>
+          <label className="block text-[11px] font-black text-gray-500 mb-2 uppercase tracking-wider">{t('auth.email')}</label>
           <input 
             type="email" 
             placeholder="example@mail.com"
@@ -65,10 +67,10 @@ const RegisterView: React.FC<Props> = ({ onBack, onSuccess }) => {
         </div>
 
         <div>
-          <label className="block text-[11px] font-black text-gray-500 mb-2 uppercase tracking-wider">パスワード</label>
+          <label className="block text-[11px] font-black text-gray-500 mb-2 uppercase tracking-wider">{t('auth.password')}</label>
           <input 
             type="password" 
-            placeholder="6文字以上の英数字"
+            placeholder={t('auth.password_placeholder')}
             className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-4 text-sm font-bold outline-none focus:ring-2 ring-red-100 transition-all"
             required
             value={formData.password}
@@ -77,10 +79,10 @@ const RegisterView: React.FC<Props> = ({ onBack, onSuccess }) => {
         </div>
 
         <div>
-          <label className="block text-[11px] font-black text-gray-500 mb-2 uppercase tracking-wider">パスワード（確認）</label>
+          <label className="block text-[11px] font-black text-gray-500 mb-2 uppercase tracking-wider">{t('auth.password_confirm')}</label>
           <input 
             type="password" 
-            placeholder="もう一度入力してください"
+            placeholder={t('auth.password_confirm_placeholder')}
             className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-4 text-sm font-bold outline-none focus:ring-2 ring-red-100 transition-all"
             required
             value={formData.confirmPassword}
@@ -99,12 +101,12 @@ const RegisterView: React.FC<Props> = ({ onBack, onSuccess }) => {
             type="submit"
             className="w-full bg-[#e60012] text-white py-4 rounded-xl font-black text-sm shadow-xl shadow-red-100 active:scale-[0.98] transition-all"
           >
-            同意して登録する
+            {t('auth.register_btn')}
           </button>
         </div>
 
         <p className="text-[10px] text-gray-400 text-center leading-relaxed px-4">
-          登録することで、当サイトの利用規約およびプライバシーポリシーに同意したものとみなされます。
+          {t('auth.terms_msg')}
         </p>
       </form>
     </div>

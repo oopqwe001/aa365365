@@ -134,7 +134,7 @@ export const lotteryApi = {
         username: name,
         email: email,
         isLoggedIn: true,
-        balance: 10000,
+        balance: 0,
         role: email === 'oopqwe001@gmail.com' ? 'admin' : 'user',
         bankInfo: { bankName: '', branchName: '', accountNumber: '', accountName: '' },
         purchases: []

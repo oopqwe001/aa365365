@@ -1,0 +1,96 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Application user profile and balance information",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "username": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "balance": { "type": "number" },
+        "bankInfo": {
+          "type": "object",
+          "properties": {
+            "bankName": { "type": "string" },
+            "branchName": { "type": "string" },
+            "accountNumber": { "type": "string" },
+            "accountName": { "type": "string" }
+          }
+        },
+        "purchases": {
+          "type": "array",
+          "items": { "$ref": "Purchase" }
+        }
+      },
+      "required": ["id", "username", "balance"]
+    },
+    "Purchase": {
+      "title": "Purchase",
+      "description": "Lottery ticket purchase record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "gameId": { "type": "string" },
+        "numbers": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": { "type": "number" }
+          }
+        },
+        "timestamp": { "type": "number" },
+        "isProcessed": { "type": "boolean" },
+        "status": { "type": "string", "enum": ["pending", "won", "lost"] },
+        "winAmount": { "type": "number" }
+      }
+    },
+    "Transaction": {
+      "title": "Transaction",
+      "description": "Deposit or withdrawal request",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "type": { "type": "string", "enum": ["deposit", "withdraw"] },
+        "amount": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "timestamp": { "type": "number" },
+        "bankDetails": {
+          "type": "object",
+          "properties": {
+            "bankName": { "type": "string" },
+            "branchName": { "type": "string" },
+            "accountNumber": { "type": "string" },
+            "accountName": { "type": "string" }
+          }
+        }
+      }
+    },
+    "AdminConfig": {
+      "title": "AdminConfig",
+      "description": "Global application configuration and winning numbers",
+      "type": "object",
+      "properties": {
+        "lineLink": { "type": "string" },
+        "logoUrl": { "type": "string" },
+        "winningNumbers": { "type": "object" }
+      }
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "/transactions/{transactionId}": {
+      "schema": "Transaction",
+      "description": "Financial transactions"
+    },
+    "/config/global": {
+      "schema": "AdminConfig",
+      "description": "Global settings"
+    }
+  }
+}

@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { AppView, LotteryGame, Selection, User, AdminConfig, Purchase, Transaction } from './types';
 import { lotteryApi } from './services/api';
 import { auth, db } from './services/firebase';
@@ -20,13 +21,14 @@ import PurchaseHistory from '@/components/PurchaseHistoryList';
 import RegisterView from '@/components/RegisterView';
 import LoginView from '@/components/LoginView';
 
-const GAMES: LotteryGame[] = [
-  { id: 'loto7', name: 'LOTO 7', fullName: 'ロトセブン', drawDayText: '毎日', drawDayIcon: '全', maxJackpot: '12億円', price: 300, maxNumber: 37, pickCount: 7, color: '#e60012', colorSecondary: '#005bac' },
-  { id: 'loto6', name: 'LOTO 6', fullName: 'ロトシックス', drawDayText: '毎日', drawDayIcon: '全', maxJackpot: '6億円', price: 200, maxNumber: 43, pickCount: 6, color: '#d81b60', colorSecondary: '#f08300' },
-  { id: 'miniloto', name: 'MINI LOTO', fullName: 'ミニロト', drawDayText: '毎日', drawDayIcon: '全', maxJackpot: '1,000万円', price: 200, maxNumber: 31, pickCount: 5, color: '#009b4f', colorSecondary: '#f08300' }
+const GAMES_DATA: Omit<LotteryGame, 'fullName' | 'drawDayText' | 'maxJackpot'>[] = [
+  { id: 'loto7', name: 'LOTO 7', drawDayIcon: '全', price: 300, maxNumber: 37, pickCount: 7, color: '#e60012', colorSecondary: '#005bac' },
+  { id: 'loto6', name: 'LOTO 6', drawDayIcon: '全', price: 200, maxNumber: 43, pickCount: 6, color: '#d81b60', colorSecondary: '#f08300' },
+  { id: 'miniloto', name: 'MINI LOTO', drawDayIcon: '全', price: 200, maxNumber: 31, pickCount: 5, color: '#009b4f', colorSecondary: '#f08300' }
 ];
 
 const App: React.FC = () => {
+  const { t } = useTranslation();
   const [view, setView] = useState<AppView>('home');
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<{message: string, type: 'success' | 'error'} | null>(null);
@@ -35,6 +37,13 @@ const App: React.FC = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [adminConfig, setAdminConfig] = useState<AdminConfig | null>(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
+
+  const GAMES: LotteryGame[] = GAMES_DATA.map(g => ({
+    ...g,
+    fullName: t(`games.${g.id}.fullName`),
+    drawDayText: t(`games.${g.id}.drawDayText`),
+    maxJackpot: t(`games.${g.id}.maxJackpot`)
+  }));
 
   const [selectedGame, setSelectedGame] = useState<LotteryGame>(GAMES[0]);
   const [selections, setSelections] = useState<Selection[]>(
@@ -146,7 +155,7 @@ const App: React.FC = () => {
 
   const handleUpdateUser = async (uid: string, data: any) => {
     await lotteryApi.updateUserBalance(uid, data.balance);
-    showToast("ユーザー情報を更新しました");
+    showToast(t('admin.user_updated', { defaultValue: 'ユーザー情報を更新しました' }));
   };
 
   useEffect(() => {
@@ -161,7 +170,7 @@ const App: React.FC = () => {
     const res = await lotteryApi.register(data.email, data.password, data.username);
     setLoading(false);
     if (res.success && res.user) {
-      showToast("登録が完了しました！");
+      showToast(t('auth.register_success', { defaultValue: '登録が完了しました！' }));
       setActiveUser(res.user);
       setView('home');
     } else {
@@ -174,7 +183,7 @@ const App: React.FC = () => {
     const res = await lotteryApi.login(email, pass);
     setLoading(false);
     if (res.success && res.user) {
-      showToast("ログインしました");
+      showToast(t('auth.login_success', { defaultValue: 'ログインしました' }));
       setActiveUser(res.user);
       setView('home');
     } else {
@@ -186,13 +195,13 @@ const App: React.FC = () => {
     await lotteryApi.logout();
     setActiveUser({
       id: 'GUEST',
-      username: 'ゲスト',
+      username: t('common.guest', { defaultValue: 'ゲスト' }),
       isLoggedIn: false,
       balance: 0,
       bankInfo: { bankName: '', branchName: '', accountNumber: '', accountName: '' },
       purchases: []
     });
-    showToast("ログアウトしました");
+    showToast(t('auth.logout_success', { defaultValue: 'ログアウトしました' }));
     setView('home');
   };
 
@@ -207,13 +216,13 @@ const App: React.FC = () => {
       timestamp: Date.now()
     };
     await lotteryApi.createTransaction(newTx);
-    showToast("入金申請を受け付けました。LINEでご連絡ください。");
+    showToast(t('finance.deposit_submitted', { defaultValue: '入金申請を受け付けました。LINEでご連絡ください。' }));
     setView('mypage');
   };
 
   const handleWithdrawSubmit = async (data: any) => {
     if (!activeUser || activeUser.balance < data.amount) {
-      showToast("残高が不足しています", "error");
+      showToast(t('finance.insufficient_balance', { defaultValue: '残高が不足しています' }), "error");
       return;
     }
     const newTx: Transaction = {
@@ -231,22 +240,22 @@ const App: React.FC = () => {
       }
     };
     await lotteryApi.createTransaction(newTx);
-    showToast("出金申請を受け付けました。審査をお待ちください。");
+    showToast(t('finance.withdraw_submitted', { defaultValue: '出金申請を受け付けました。審査をお待ちください。' }));
     setView('mypage');
   };
 
   const handleProcessTx = async (id: string, status: 'approved' | 'rejected') => {
     await lotteryApi.updateTransactionStatus(id, status);
-    showToast(`取引を${status === 'approved' ? '承認' : '却下'}しました`);
+    showToast(t(status === 'approved' ? 'admin.tx_approved' : 'admin.tx_rejected', { defaultValue: `取引を${status === 'approved' ? '承認' : '却下'}しました` }));
   };
 
   const handleExecuteDraw = async (date: string) => {
     setLoading(true);
     try {
       await lotteryApi.executeDraw(date, GAMES);
-      showToast(`${date} の開奖と派奖が完了しました！`);
+      showToast(t('admin.draw_executed', { defaultValue: `${date} の開奖と派奖が完了しました！`, date }));
     } catch (e) {
-      showToast("開奖エラーが発生しました", "error");
+      showToast(t('admin.draw_error', { defaultValue: '開奖エラーが発生しました' }), "error");
     } finally {
       setLoading(false);
     }
@@ -260,7 +269,7 @@ const App: React.FC = () => {
     try {
       const res = await lotteryApi.processPurchase(activeUser.id, selectedGame, selections);
       if (res.success) {
-        showToast("購入が完了しました");
+        showToast(t('home.buy_success', { defaultValue: '購入が完了しました' }));
         setView('home');
         setSelections(['A', 'B', 'C', 'D', 'E'].map(id => ({ id, numbers: [], count: 1, duration: 1 })));
       } else {
@@ -268,7 +277,7 @@ const App: React.FC = () => {
       }
     } catch (e) {
       console.error(e);
-      showToast("通信エラーが発生しました。権限設定を確認してください。", "error");
+      showToast(t('common.error_connection', { defaultValue: '通信エラーが発生しました。権限設定を確認してください。' }), "error");
     } finally {
       setLoading(false);
     }
@@ -322,10 +331,11 @@ const App: React.FC = () => {
           {view === 'admin' && isAdmin && (
             <AdminPanel 
               config={adminConfig} 
-              setConfig={async (c) => { setAdminConfig(c); await lotteryApi.saveConfig(c); showToast("設定を保存しました"); }} 
+              setConfig={async (c) => { setAdminConfig(c); await lotteryApi.saveConfig(c); showToast(t('admin.config_saved', { defaultValue: '設定を保存しました' })); }} 
               onBack={() => setView('home')}
               users={allUsers}
               transactions={transactions}
+              games={GAMES}
               onProcessTx={handleProcessTx}
               onUpdateUser={handleUpdateUser}
               onExecuteDraw={handleExecuteDraw}
@@ -334,19 +344,19 @@ const App: React.FC = () => {
           {view === 'admin' && !isAdmin && (
             <div className="flex flex-col items-center justify-center h-full p-10 text-center">
               <i className="fas fa-lock text-4xl text-gray-300 mb-4"></i>
-              <h3 className="text-lg font-black text-gray-800">アクセス権限がありません</h3>
-              <p className="text-xs text-gray-500 mt-2">管理者アカウントでログインしてください。</p>
-              <button onClick={() => setView('login')} className="mt-6 bg-[#e60012] text-white px-8 py-2 rounded-full font-black text-xs">ログイン画面へ</button>
-              <button onClick={() => setView('home')} className="mt-4 text-gray-400 text-[10px] font-bold">ホームに戻る</button>
+              <h3 className="text-lg font-black text-gray-800">{t('admin.no_access', { defaultValue: 'アクセス権限がありません' })}</h3>
+              <p className="text-xs text-gray-500 mt-2">{t('admin.no_access_desc', { defaultValue: '管理者アカウントでログインしてください。' })}</p>
+              <button onClick={() => setView('login')} className="mt-6 bg-[#e60012] text-white px-8 py-2 rounded-full font-black text-xs">{t('auth.login_title')}</button>
+              <button onClick={() => setView('home')} className="mt-4 text-gray-400 text-[10px] font-bold">{t('common.back_home')}</button>
             </div>
           )}
         </main>
         
         <nav className="fixed bottom-0 w-full max-w-[390px] bg-white/95 backdrop-blur-md flex justify-around items-center h-16 z-50 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] border-t border-gray-100">
           {[
-            { id: 'home', icon: 'fa-home', label: 'ホーム' },
-            { id: 'history', icon: 'fa-trophy', label: '抽選結果' },
-            { id: 'mypage', icon: 'fa-user-circle', label: 'マイページ' }
+            { id: 'home', icon: 'fa-home', label: t('common.home') },
+            { id: 'history', icon: 'fa-trophy', label: t('common.history') },
+            { id: 'mypage', icon: 'fa-user-circle', label: t('common.mypage') }
           ].map(tab => (
             <button 
               key={tab.id}

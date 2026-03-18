@@ -1,9 +1,10 @@
 {
-  "apiKey": "AIzaSyAs-XXXXXXXXXXXX",
-  "authDomain": "lottery-simulation-app.firebaseapp.com",
-  "projectId": "lottery-simulation-app",
-  "storageBucket": "lottery-simulation-app.appspot.com",
-  "messagingSenderId": "488374131233",
-  "appId": "1:488374131233:web:XXXXXXXXXXXX",
-  "firestoreDatabaseId": "(default)"
+  "projectId": "ai-studio-applet-webapp-c7908",
+  "appId": "1:296554820985:web:fce4e17f8e125886f6aba8",
+  "apiKey": "AIzaSyD28QaVodqTnOe_rjlWKEWAS3qhWrujic8",
+  "authDomain": "ai-studio-applet-webapp-c7908.firebaseapp.com",
+  "firestoreDatabaseId": "ai-studio-f6f9e9dc-a229-48c7-b552-ecb3b19ea5ff",
+  "storageBucket": "ai-studio-applet-webapp-c7908.firebasestorage.app",
+  "messagingSenderId": "296554820985",
+  "measurementId": ""
 }

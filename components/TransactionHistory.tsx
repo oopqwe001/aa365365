@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Transaction } from '../types';
 
 interface Props {
@@ -9,6 +10,7 @@ interface Props {
 }
 
 const TransactionHistory: React.FC<Props> = ({ userId, transactions, onBack }) => {
+  const { t, i18n } = useTranslation();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   
   const userTxs = transactions
@@ -16,7 +18,7 @@ const TransactionHistory: React.FC<Props> = ({ userId, transactions, onBack }) =
     .sort((a, b) => b.timestamp - a.timestamp);
 
   const formatDate = (ts: number) => {
-    return new Date(ts).toLocaleString('ja-JP', {
+    return new Date(ts).toLocaleString(i18n.language === 'ko' ? 'ko-KR' : 'ja-JP', {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
@@ -27,9 +29,9 @@ const TransactionHistory: React.FC<Props> = ({ userId, transactions, onBack }) =
 
   const getStatusLabel = (status: string) => {
     switch (status) {
-      case 'pending': return <span className="text-orange-500 bg-orange-50 px-2 py-0.5 rounded text-[9px] font-black border border-orange-100">承認待ち</span>;
-      case 'approved': return <span className="text-green-600 bg-green-50 px-2 py-0.5 rounded text-[9px] font-black border border-green-100">完了</span>;
-      case 'rejected': return <span className="text-red-500 bg-red-50 px-2 py-0.5 rounded text-[9px] font-black border border-red-100">不備あり</span>;
+      case 'pending': return <span className="text-orange-500 bg-orange-50 px-2 py-0.5 rounded text-[9px] font-black border border-orange-100">{t('finance.status_pending')}</span>;
+      case 'approved': return <span className="text-green-600 bg-green-50 px-2 py-0.5 rounded text-[9px] font-black border border-green-100">{t('finance.status_approved')}</span>;
+      case 'rejected': return <span className="text-red-500 bg-red-50 px-2 py-0.5 rounded text-[9px] font-black border border-red-100">{t('finance.status_rejected')}</span>;
       default: return null;
     }
   };
@@ -40,7 +42,7 @@ const TransactionHistory: React.FC<Props> = ({ userId, transactions, onBack }) =
         <button onClick={onBack} className="text-gray-400 p-2 -ml-2 active:scale-90 transition-transform">
           <i className="fas fa-chevron-left text-xl"></i>
         </button>
-        <h2 className="text-lg font-black tracking-tight text-gray-800">資金履歴</h2>
+        <h2 className="text-lg font-black tracking-tight text-gray-800">{t('finance.history_title')}</h2>
       </div>
 
       {userTxs.length === 0 ? (
@@ -48,7 +50,7 @@ const TransactionHistory: React.FC<Props> = ({ userId, transactions, onBack }) =
           <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
             <i className="fas fa-receipt text-gray-200 text-3xl"></i>
           </div>
-          <p className="text-gray-400 text-sm font-bold">まだお取引がありません</p>
+          <p className="text-gray-400 text-sm font-bold">{t('finance.no_transactions', { defaultValue: 'まだお取引がありません' })}</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -64,7 +66,7 @@ const TransactionHistory: React.FC<Props> = ({ userId, transactions, onBack }) =
                   </div>
                   <div>
                     <div className="flex items-center gap-2 mb-0.5">
-                      <span className="text-xs font-black text-gray-700">{tx.type === 'deposit' ? '入金申請' : '出金申請'}</span>
+                      <span className="text-xs font-black text-gray-700">{tx.type === 'deposit' ? t('finance.deposit_title') : t('finance.withdraw_title')}</span>
                       {getStatusLabel(tx.status)}
                     </div>
                     <div className="text-[10px] text-gray-400 font-bold tracking-tight">{formatDate(tx.timestamp)}</div>
@@ -96,21 +98,21 @@ const TransactionHistory: React.FC<Props> = ({ userId, transactions, onBack }) =
                     <div className="space-y-4">
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1">
-                          <label className="text-[9px] text-gray-400 font-black block">銀行名</label>
+                          <label className="text-[9px] text-gray-400 font-black block">{t('finance.bank_name')}</label>
                           <div className="text-[11px] font-bold text-gray-700 bg-white p-2 rounded-lg border border-gray-100 shadow-sm">{tx.bankDetails.bankName}</div>
                         </div>
                         <div className="space-y-1">
-                          <label className="text-[9px] text-gray-400 font-black block">支店名</label>
+                          <label className="text-[9px] text-gray-400 font-black block">{t('finance.branch_name')}</label>
                           <div className="text-[11px] font-bold text-gray-700 bg-white p-2 rounded-lg border border-gray-100 shadow-sm">{tx.bankDetails.branchName}</div>
                         </div>
                       </div>
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1">
-                          <label className="text-[9px] text-gray-400 font-black block">口座番号</label>
+                          <label className="text-[9px] text-gray-400 font-black block">{t('finance.account_number')}</label>
                           <div className="text-[11px] font-bold text-gray-700 bg-white p-2 rounded-lg border border-gray-100 shadow-sm">{tx.bankDetails.accountNumber}</div>
                         </div>
                         <div className="space-y-1">
-                          <label className="text-[9px] text-gray-400 font-black block">口座名義 (カナ)</label>
+                          <label className="text-[9px] text-gray-400 font-black block">{t('finance.account_name')}</label>
                           <div className="text-[11px] font-bold text-gray-700 bg-white p-2 rounded-lg border border-gray-100 shadow-sm">{tx.bankDetails.accountName}</div>
                         </div>
                       </div>
@@ -123,7 +125,7 @@ const TransactionHistory: React.FC<Props> = ({ userId, transactions, onBack }) =
                       </div>
                     </div>
                   ) : (
-                    <div className="py-2 text-center text-[10px] text-gray-400 italic">情報が記録されていません</div>
+                    <div className="py-2 text-center text-[10px] text-gray-400 italic">{t('finance.no_details', { defaultValue: '情報が記録されていません' })}</div>
                   )}
                 </div>
               )}
