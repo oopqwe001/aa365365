@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, Component, ErrorInfo, ReactNode } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AppView, LotteryGame, Selection, User, AdminConfig, Purchase, Transaction } from './types';
 import { lotteryApi } from './services/api';
@@ -21,42 +21,6 @@ import PurchaseHistory from '@/components/PurchaseHistoryList';
 import RegisterView from '@/components/RegisterView';
 import LoginView from '@/components/LoginView';
 
-// Error Boundary Component
-class ErrorBoundary extends Component<{children: ReactNode}, {hasError: boolean, error: Error | null}> {
-  constructor(props: {children: ReactNode}) {
-    super(props);
-    this.state = { hasError: false, error: null };
-  }
-
-  static getDerivedStateFromError(error: Error) {
-    return { hasError: true, error };
-  }
-
-  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error("ErrorBoundary caught an error", error, errorInfo);
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div className="flex flex-col items-center justify-center h-screen p-10 text-center bg-white">
-          <i className="fas fa-exclamation-triangle text-4xl text-red-500 mb-4"></i>
-          <h3 className="text-lg font-black text-gray-800">Something went wrong.</h3>
-          <p className="text-xs text-gray-500 mt-2">{this.state.error?.message}</p>
-          <button 
-            onClick={() => window.location.reload()} 
-            className="mt-6 bg-[#e60012] text-white px-8 py-2 rounded-full font-black text-xs"
-          >
-            Reload App
-          </button>
-        </div>
-      );
-    }
-
-    return this.props.children;
-  }
-}
-
 const GAMES_DATA: Omit<LotteryGame, 'fullName' | 'drawDayText' | 'maxJackpot'>[] = [
   { id: 'loto7', name: 'LOTO 7', drawDayIcon: '全', price: 300, maxNumber: 37, pickCount: 7, color: '#e60012', colorSecondary: '#005bac' },
   { id: 'loto6', name: 'LOTO 6', drawDayIcon: '全', price: 200, maxNumber: 43, pickCount: 6, color: '#d81b60', colorSecondary: '#f08300' },
@@ -71,12 +35,7 @@ const App: React.FC = () => {
   const [activeUser, setActiveUser] = useState<User | null>(null);
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [adminConfig, setAdminConfig] = useState<AdminConfig>({
-    winningNumbers: {},
-    prizeSettings: {},
-    logoUrl: "https://www.takarakuji-official.jp/assets/img/common/logo.svg",
-    lineLink: ""
-  });
+  const [adminConfig, setAdminConfig] = useState<AdminConfig | null>(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
 
   const GAMES: LotteryGame[] = GAMES_DATA.map(g => ({
@@ -100,23 +59,9 @@ const App: React.FC = () => {
   // Auth Initialization
   useEffect(() => {
     const initAuth = async () => {
-      try {
-        const userData = await lotteryApi.getActiveUser();
-        setActiveUser(userData);
-      } catch (e) {
-        console.error("Auth Init Error:", e);
-        // Fallback to guest if error
-        setActiveUser({
-          id: 'GUEST',
-          username: t('common.guest', { defaultValue: 'ゲスト' }),
-          isLoggedIn: false,
-          balance: 0,
-          bankInfo: { bankName: '', branchName: '', accountNumber: '', accountName: '' },
-          purchases: []
-        });
-      } finally {
-        setIsAuthReady(true);
-      }
+      const userData = await lotteryApi.getActiveUser();
+      setActiveUser(userData);
+      setIsAuthReady(true);
     };
     initAuth();
   }, []);
@@ -130,20 +75,8 @@ const App: React.FC = () => {
       if (doc.exists()) {
         setAdminConfig(doc.data() as AdminConfig);
       } else {
-        lotteryApi.getConfig().then(setAdminConfig).catch(e => {
-          console.error("Config Fetch Error:", e);
-          // Set a default config if everything fails
-          setAdminConfig({
-            logoUrl: '',
-            lineLink: '',
-            winningNumbers: {}
-          });
-        });
+        lotteryApi.getConfig().then(setAdminConfig);
       }
-    }, (error) => {
-      console.error("Config Snapshot Error:", error);
-      // Try manual fetch if snapshot fails
-      lotteryApi.getConfig().then(setAdminConfig).catch(console.error);
     });
 
     // Transactions Listener
@@ -196,13 +129,9 @@ const App: React.FC = () => {
         
         for (const date of datesToCheck) {
           const gamesToProcess = GAMES.filter(game => {
-            // 如果中奖号码缺失，或者有该日期及之前的未处理订单，则执行开奖
+            // 如果中奖号码缺失，或者有未处理的订单，则执行开奖
             const hasWinningNumbers = adminConfig.winningNumbers[game.id] && adminConfig.winningNumbers[game.id][date];
-            const hasPendingPurchases = allUsers.some(u => u.purchases.some(p => 
-              p.gameId === game.id && 
-              !p.isProcessed && 
-              new Date(p.timestamp).toLocaleDateString('sv-SE', {timeZone: 'Asia/Tokyo'}) <= date
-            ));
+            const hasPendingPurchases = allUsers.some(u => u.purchases.some(p => p.gameId === game.id && !p.isProcessed));
             return !hasWinningNumbers || hasPendingPurchases;
           });
           
@@ -366,15 +295,6 @@ const App: React.FC = () => {
     else setView('home');
   };
 
-  if (!isAuthReady || !activeUser || !adminConfig) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-[#f2f2f2]">
-        <div className="w-10 h-10 border-4 border-[#e60012] border-t-transparent rounded-full animate-spin mb-4"></div>
-        <p className="text-xs font-black text-gray-400 tracking-widest uppercase">Loading...</p>
-      </div>
-    );
-  }
-
   const filteredWinningNumbers = React.useMemo(() => {
     if (!adminConfig?.winningNumbers) return {};
     const jstNow = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Tokyo"}));
@@ -392,9 +312,10 @@ const App: React.FC = () => {
     return filtered;
   }, [adminConfig?.winningNumbers]);
 
+  if (!activeUser || !adminConfig) return null;
+
   return (
-    <ErrorBoundary>
-      <div className="flex justify-center bg-[#f2f2f2] min-h-screen font-sans">
+    <div className="flex justify-center bg-[#f2f2f2] min-h-screen font-sans">
       <div className={`w-full max-w-[390px] bg-white min-h-screen relative flex flex-col shadow-2xl overflow-hidden`}>
         
         {toast && (
@@ -486,7 +407,6 @@ const App: React.FC = () => {
         )}
       </div>
     </div>
-    </ErrorBoundary>
   );
 };
 
