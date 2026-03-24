@@ -16,7 +16,13 @@ const MyPage: React.FC<Props> = ({ user, onAction, onLogout }) => {
   return (
     <div className="min-h-full bg-[#fffdf0] pb-10 view-transition">
       <div className="p-5">
-        <h2 className="text-[22px] font-black text-[#333] mb-6 tracking-tight">{t('common.mypage')}</h2>
+        <div className="flex flex-col mb-6">
+          <h2 className="text-[22px] font-black text-[#333] tracking-tight">{t('common.mypage')}</h2>
+          <div className="flex items-center gap-2 mt-1">
+            <span className="text-[14px] font-bold text-gray-700">{user.username}</span>
+            <span className="text-[11px] font-bold bg-gray-200 text-gray-500 px-2 py-0.5 rounded-full">ID: {user.displayId || '-----'}</span>
+          </div>
+        </div>
         
         {/* 余额卡片 - 增加黄色装饰与阴影 */}
         <div className="bg-white rounded-[1.5rem] p-8 shadow-[0_10px_30px_rgba(0,0,0,0.03)] border border-gray-100 mb-8 relative overflow-hidden">

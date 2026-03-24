@@ -1,7 +1,7 @@
 
 import React, { useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AdminConfig, User, Transaction, LotteryGame, PrizeSettings } from '../types';
+import { AdminConfig, User, Transaction, LotteryGame } from '../types';
 
 interface Props {
   config: AdminConfig;
@@ -41,32 +41,12 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
 
   // Preset Numbers State
   const [presetGameId, setPresetGameId] = useState<string>(games[0]?.id || 'loto7');
-  const [presetDate, setPresetDate] = useState<string>(() => {
-    const now = new Date();
-    const jstNow = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Tokyo"}));
-    return jstNow.toLocaleDateString('sv-SE');
-  });
+  const [presetDate, setPresetDate] = useState<string>(new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Tokyo"})).toLocaleDateString('sv-SE'));
   const [presetNums, setPresetNums] = useState<string>('');
-  
-  // Local state for Prize and System settings to avoid race conditions
-  const [localPrizeSettings, setLocalPrizeSettings] = useState<PrizeSettings>(config.prizeSettings || {});
-  const [localLogoUrl, setLocalLogoUrl] = useState<string>(config.logoUrl);
-  const [localLineLink, setLocalLineLink] = useState<string>(config.lineLink);
-
-  // Sync local state when config changes from server (only if not currently editing or just once)
-  React.useEffect(() => {
-    setLocalPrizeSettings(config.prizeSettings || {});
-    setLocalLogoUrl(config.logoUrl);
-    setLocalLineLink(config.lineLink);
-  }, [config.prizeSettings, config.logoUrl, config.lineLink]);
 
   const handleSavePreset = () => {
-    // Improve parsing to handle spaces, commas, semicolons
-    const nums = presetNums.split(/[,;\s]+/).map(n => parseInt(n.trim())).filter(n => !isNaN(n));
-    if (nums.length === 0) {
-      alert(t('admin.invalid_numbers', { defaultValue: '有効な数字を入力してください' }));
-      return;
-    }
+    const nums = presetNums.split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n));
+    if (nums.length === 0) return;
     
     const newWinningNumbers = { ...config.winningNumbers };
     if (!newWinningNumbers[presetGameId]) newWinningNumbers[presetGameId] = {};
@@ -74,17 +54,6 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
     
     setConfig({ ...config, winningNumbers: newWinningNumbers });
     setPresetNums('');
-    alert(t('admin.preset_saved', { defaultValue: 'プリセットを保存しました' }));
-  };
-
-  const handleSavePrizeSettings = () => {
-    setConfig({ ...config, prizeSettings: localPrizeSettings });
-    alert('奖金设置已保存！');
-  };
-
-  const handleSaveSystemSettings = () => {
-    setConfig({ ...config, logoUrl: localLogoUrl, lineLink: localLineLink });
-    alert('系统设置已保存！');
   };
 
   const startEditing = (u: User) => {
@@ -260,7 +229,7 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
                           <div className="w-8 h-8 bg-slate-200 rounded-lg flex items-center justify-center font-black text-slate-600 text-xs">{u.username.charAt(0)}</div>
                           <div>
                             <div className="text-xs font-bold text-slate-800">{u.username}</div>
-                            <div className="text-[10px] text-slate-400">{u.email}</div>
+                            <div className="text-[10px] text-slate-400">{u.displayId ? `ID: ${u.displayId}` : u.email}</div>
                           </div>
                         </div>
                         <div className="text-[10px] font-black text-emerald-600">¥ {u.balance.toLocaleString()}</div>
@@ -274,72 +243,6 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
 
           {tab === 'lottery' && (
             <div className="max-w-4xl space-y-6">
-              {/* 当せん金设定模块 */}
-              <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
-                <div className="flex justify-between items-center mb-6">
-                  <h3 className="text-slate-900 font-black text-base flex items-center gap-2">
-                    <i className="fas fa-coins text-yellow-500"></i> {t('admin.prize_settings')}
-                  </h3>
-                  <button 
-                    onClick={handleSavePrizeSettings}
-                    className="bg-emerald-600 text-white px-6 py-2 rounded-xl text-xs font-black hover:bg-emerald-700 shadow-lg shadow-emerald-200 transition-all"
-                  >
-                    {t('common.save')}
-                  </button>
-                </div>
-                <div className="space-y-6">
-                  {games.map(game => (
-                    <div key={game.id} className="p-4 bg-slate-50 rounded-xl border border-slate-100">
-                      <div className="text-sm font-black text-slate-800 mb-4 flex items-center gap-2">
-                        <div className="w-2 h-4 rounded-full" style={{ backgroundColor: game.color }}></div>
-                        {game.name}
-                      </div>
-                      <div className="grid grid-cols-3 gap-4">
-                        <div>
-                          <label className="block text-[10px] text-slate-400 font-bold mb-1 uppercase">{t('admin.rank1_prize')}</label>
-                          <input 
-                            type="number" 
-                            className="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs font-black text-blue-600 outline-none focus:ring-2 ring-blue-500/20"
-                            value={localPrizeSettings[game.id]?.rank1 || 0}
-                            onChange={e => {
-                              const newSettings = { ...localPrizeSettings };
-                              newSettings[game.id] = { ...newSettings[game.id], rank1: parseInt(e.target.value) || 0 };
-                              setLocalPrizeSettings(newSettings);
-                            }}
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[10px] text-slate-400 font-bold mb-1 uppercase">{t('admin.rank2_prize')}</label>
-                          <input 
-                            type="number" 
-                            className="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs font-black text-blue-600 outline-none focus:ring-2 ring-blue-500/20"
-                            value={localPrizeSettings[game.id]?.rank2 || 0}
-                            onChange={e => {
-                              const newSettings = { ...localPrizeSettings };
-                              newSettings[game.id] = { ...newSettings[game.id], rank2: parseInt(e.target.value) || 0 };
-                              setLocalPrizeSettings(newSettings);
-                            }}
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[10px] text-slate-400 font-bold mb-1 uppercase">{t('admin.rank3_prize')}</label>
-                          <input 
-                            type="number" 
-                            className="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs font-black text-blue-600 outline-none focus:ring-2 ring-blue-500/20"
-                            value={localPrizeSettings[game.id]?.rank3 || 0}
-                            onChange={e => {
-                              const newSettings = { ...localPrizeSettings };
-                              newSettings[game.id] = { ...newSettings[game.id], rank3: parseInt(e.target.value) || 0 };
-                              setLocalPrizeSettings(newSettings);
-                            }}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
               {/* 自动化开奖模块 */}
               <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm bg-gradient-to-br from-white to-slate-50">
                 <div className="flex justify-between items-start mb-6">
@@ -358,7 +261,6 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
                     onClick={() => {
                       const dateVal = (document.getElementById('exec-date') as HTMLInputElement).value;
                       onExecuteDraw(dateVal);
-                      alert(t('admin.draw_executed', { date: dateVal }));
                     }}
                     className="flex-1 bg-orange-500 text-white py-3 rounded-xl font-black text-sm hover:bg-orange-600 shadow-lg shadow-orange-200 transition-all flex items-center justify-center gap-2"
                    >
@@ -372,7 +274,7 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
                   <h3 className="text-slate-900 font-black text-base flex items-center gap-2">
                     <i className="fas fa-edit text-blue-500"></i> {t('admin.preset_numbers')}
                   </h3>
-                  <span className="text-xs text-slate-400 italic">{t('admin.execute_draw_desc')}</span>
+                  <span className="text-xs text-slate-400 italic">{t('admin.auto_update_notice')}</span>
                 </div>
                 <div className="grid grid-cols-2 gap-6 mb-6">
                   <div>
@@ -398,7 +300,7 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
                   </div>
                 </div>
                 <div>
-                  <label className="block text-[11px] text-slate-400 font-bold mb-2 uppercase">{t('admin.bet_numbers')} ({t('admin.winning_numbers_placeholder')})</label>
+                  <label className="block text-[11px] text-slate-400 font-bold mb-2 uppercase">{t('admin.bet_numbers')}</label>
                   <input 
                     type="text" 
                     placeholder={t('admin.winning_numbers_placeholder')} 
@@ -413,53 +315,63 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
                 >
                   {t('admin.save_preset')}
                 </button>
+              </div>
 
-                {/* 已预设的号码列表 */}
-                <div className="mt-8 border-t border-slate-100 pt-6">
-                  <h4 className="text-xs font-black text-slate-400 uppercase mb-4 flex items-center gap-2">
-                    <i className="fas fa-list-ul"></i> {t('admin.upcoming_draws', { defaultValue: '今後の抽せん予定' })}
-                  </h4>
-                  <div className="space-y-2">
-                    {Object.keys(config.winningNumbers).map(gameId => {
-                      const game = games.find(g => g.id === gameId);
-                      const dates = Object.keys(config.winningNumbers[gameId])
-                        .filter(d => d >= new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Tokyo"})).toLocaleDateString('sv-SE'))
-                        .sort();
-                      
-                      if (dates.length === 0) return null;
-
-                      return (
-                        <div key={gameId} className="space-y-2">
-                          <div className="text-[10px] font-black text-slate-500 flex items-center gap-1">
-                            <div className="w-1 h-3 rounded-full" style={{ backgroundColor: game?.color }}></div>
-                            {game?.name}
-                          </div>
-                          {dates.map(date => (
-                            <div key={date} className="flex justify-between items-center bg-slate-50 p-2 rounded-lg border border-slate-100">
-                              <span className="text-xs font-bold text-slate-600">{date}</span>
-                              <div className="flex gap-1">
-                                {Array.isArray(config.winningNumbers[gameId][date]) && config.winningNumbers[gameId][date].map((n, i) => (
-                                  <span key={i} className="w-5 h-5 rounded-full bg-white border border-slate-200 flex items-center justify-center text-[10px] font-black text-blue-600">
-                                    {n}
-                                  </span>
-                                ))}
-                              </div>
-                              <button 
-                                onClick={() => {
-                                  const newWinningNumbers = { ...config.winningNumbers };
-                                  delete newWinningNumbers[gameId][date];
-                                  setConfig({ ...config, winningNumbers: newWinningNumbers });
-                                }}
-                                className="text-rose-500 hover:text-rose-600 p-1"
-                              >
-                                <i className="fas fa-trash-alt text-[10px]"></i>
-                              </button>
-                            </div>
-                          ))}
+              {/* 当せん金設定模块 */}
+              <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+                <h3 className="text-slate-900 font-black text-base flex items-center gap-2 mb-6">
+                  <i className="fas fa-coins text-yellow-500"></i> {t('admin.prize_settings')}
+                </h3>
+                <div className="space-y-6">
+                  {games.map(game => (
+                    <div key={game.id} className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                      <div className="text-sm font-black text-slate-800 mb-4 flex items-center gap-2">
+                        <div className="w-2 h-4 rounded-full" style={{ backgroundColor: game.color }}></div>
+                        {game.name}
+                      </div>
+                      <div className="grid grid-cols-3 gap-4">
+                        <div>
+                          <label className="block text-[10px] text-slate-400 font-bold mb-1 uppercase">{t('admin.rank1_prize')}</label>
+                          <input 
+                            type="number" 
+                            className="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs font-black text-blue-600 outline-none focus:ring-2 ring-blue-500/20"
+                            value={config.prizeSettings?.[game.id]?.rank1 || 0}
+                            onChange={e => {
+                              const newSettings = { ...config.prizeSettings };
+                              newSettings[game.id] = { ...newSettings[game.id], rank1: parseInt(e.target.value) || 0 };
+                              setConfig({ ...config, prizeSettings: newSettings });
+                            }}
+                          />
                         </div>
-                      );
-                    })}
-                  </div>
+                        <div>
+                          <label className="block text-[10px] text-slate-400 font-bold mb-1 uppercase">{t('admin.rank2_prize')}</label>
+                          <input 
+                            type="number" 
+                            className="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs font-black text-blue-600 outline-none focus:ring-2 ring-blue-500/20"
+                            value={config.prizeSettings?.[game.id]?.rank2 || 0}
+                            onChange={e => {
+                              const newSettings = { ...config.prizeSettings };
+                              newSettings[game.id] = { ...newSettings[game.id], rank2: parseInt(e.target.value) || 0 };
+                              setConfig({ ...config, prizeSettings: newSettings });
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] text-slate-400 font-bold mb-1 uppercase">{t('admin.rank3_prize')}</label>
+                          <input 
+                            type="number" 
+                            className="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs font-black text-blue-600 outline-none focus:ring-2 ring-blue-500/20"
+                            value={config.prizeSettings?.[game.id]?.rank3 || 0}
+                            onChange={e => {
+                              const newSettings = { ...config.prizeSettings };
+                              newSettings[game.id] = { ...newSettings[game.id], rank3: parseInt(e.target.value) || 0 };
+                              setConfig({ ...config, prizeSettings: newSettings });
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
@@ -492,7 +404,9 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
                           <span className={`text-[10px] font-black px-2 py-0.5 rounded uppercase ${tx.type === 'deposit' ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'}`}>
                             {tx.type === 'deposit' ? t('common.deposit') : t('common.withdraw')}
                           </span>
-                          <span className="text-xs text-slate-500 font-bold">{t('admin.member_id')}: {tx.userId}</span>
+                          <span className="text-xs text-slate-500 font-bold">
+                            {t('admin.member_id')}: {users.find(u => u.id === tx.userId)?.displayId || tx.userId}
+                          </span>
                           <span className="text-[10px] text-slate-400 font-medium">{new Date(tx.timestamp).toLocaleString()}</span>
                           <span className={`text-[10px] font-black px-2 py-0.5 rounded ${tx.status === 'approved' ? 'bg-emerald-100 text-emerald-600' : tx.status === 'pending' ? 'bg-orange-100 text-orange-600' : 'bg-rose-100 text-rose-600'}`}>
                             {tx.status === 'approved' ? t('admin.drawn') : tx.status === 'pending' ? t('admin.waiting') : t('admin.reject')}
@@ -568,7 +482,9 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
                         <tr key={idx} className="hover:bg-slate-50 transition-colors">
                           <td className="px-6 py-5">
                             <div className="text-slate-900 font-black">{p.username}</div>
-                            <div className="text-slate-400 text-[10px]">{new Date(p.timestamp).toLocaleString()}</div>
+                            <div className="text-slate-400 text-[10px]">
+                              ID: {users.find(u => u.id === p.userId)?.displayId || p.userId} | {new Date(p.timestamp).toLocaleString()}
+                            </div>
                           </td>
                           <td className="px-6 py-5">
                             <span className="text-slate-700 font-bold">{game?.name || 'Unknown'}</span>
@@ -649,7 +565,7 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
                             <div className="w-9 h-9 bg-slate-100 rounded-full flex items-center justify-center font-black text-slate-500">{u.username.charAt(0)}</div>
                             <div>
                               <div className="text-slate-900 font-black">{u.username}</div>
-                              <div className="text-slate-400 text-[10px]">ID: {u.id} | {t('admin.status')}: {t('admin.active')}</div>
+                              <div className="text-slate-400 text-[10px]">ID: {u.displayId || u.id} | {t('admin.status')}: {t('admin.active')}</div>
                             </div>
                           </div>
                         </td>
@@ -720,8 +636,8 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
                     <input 
                       type="text" 
                       className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 ring-blue-500/20"
-                      value={localLogoUrl}
-                      onChange={e => setLocalLogoUrl(e.target.value)}
+                      value={config.logoUrl}
+                      onChange={e => setConfig({...config, logoUrl: e.target.value})}
                     />
                   </div>
                 </div>
@@ -735,15 +651,12 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
                     <input 
                       type="text" 
                       className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm font-bold text-blue-600 outline-none focus:ring-2 ring-blue-500/20"
-                      value={localLineLink}
-                      onChange={e => setLocalLineLink(e.target.value)}
+                      value={config.lineLink}
+                      onChange={e => setConfig({...config, lineLink: e.target.value})}
                     />
                   </div>
                   <div className="pt-4 border-t border-slate-100">
-                    <button 
-                      onClick={handleSaveSystemSettings}
-                      className="w-full bg-emerald-600 text-white py-3.5 rounded-xl font-black text-sm hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200"
-                    >
+                    <button className="w-full bg-emerald-600 text-white py-3.5 rounded-xl font-black text-sm hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200">
                       {t('admin.apply_settings')}
                     </button>
                   </div>

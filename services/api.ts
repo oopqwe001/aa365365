@@ -129,8 +129,10 @@ export const lotteryApi = {
       }
 
       const uid = `user_${Date.now()}`;
+      const displayId = Math.floor(10000 + Math.random() * 90000).toString();
       const newUser: User = {
         id: uid,
+        displayId: displayId,
         username: name,
         email: email,
         isLoggedIn: true,
@@ -182,7 +184,14 @@ export const lotteryApi = {
 
       const userData = snapshot.docs[0].data() as User;
       if ((userData as any).password === pass) {
-        const user = { ...userData, isLoggedIn: true };
+        let user = { ...userData, isLoggedIn: true };
+        
+        // Ensure displayId exists
+        if (!user.displayId) {
+          user.displayId = Math.floor(10000 + Math.random() * 90000).toString();
+          await updateDoc(doc(db, 'users', user.id), { displayId: user.displayId });
+        }
+
         localStorage.setItem('lottery_user', JSON.stringify(user));
         return { success: true, message: "ログイン成功", user };
       } else {
@@ -287,15 +296,12 @@ export const lotteryApi = {
 
       if (configDoc.exists()) {
         const data = configDoc.data() as AdminConfig;
-        // Merge with defaultConfig to ensure all fields (like prizeSettings) exist
-        const merged = { ...defaultConfig, ...data };
-        
         // If winningNumbers is empty, seed it with defaults
-        if (Object.keys(merged.winningNumbers || {}).length === 0) {
-          merged.winningNumbers = defaultConfig.winningNumbers;
-          await setDoc(doc(db, 'config', 'global'), merged);
+        if (Object.keys(data.winningNumbers || {}).length === 0) {
+          await setDoc(doc(db, 'config', 'global'), { ...data, winningNumbers: defaultConfig.winningNumbers });
+          return { ...data, winningNumbers: defaultConfig.winningNumbers };
         }
-        return merged;
+        return data;
       }
 
       await setDoc(doc(db, 'config', 'global'), defaultConfig);

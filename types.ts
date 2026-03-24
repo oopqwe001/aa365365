@@ -10,6 +10,7 @@ export interface BankInfo {
 
 export interface User {
   id: string;
+  displayId?: string;
   username: string;
   email?: string;
   password?: string;
@@ -81,3 +82,4 @@ export interface Selection {
   count: number;
   duration: number;
 }
+
