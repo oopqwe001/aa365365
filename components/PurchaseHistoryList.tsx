@@ -33,7 +33,10 @@ const PurchaseHistory: React.FC<Props> = ({ purchases, games, onBack }) => {
         ) : (
           sortedPurchases.map((p) => {
             const game = getGame(p.gameId);
-            const date = new Date(p.timestamp).toLocaleString(i18n.language === 'ko' ? 'ko-KR' : 'ja-JP', {
+            const pDate = new Date(p.timestamp);
+            const drawDateStr = new Date(pDate.toLocaleString("en-US", {timeZone: "Asia/Tokyo"})).toLocaleDateString('sv-SE');
+
+            const date = pDate.toLocaleString(i18n.language === 'ko' ? 'ko-KR' : 'ja-JP', {
               month: '2-digit',
               day: '2-digit',
               hour: '2-digit',
@@ -46,6 +49,9 @@ const PurchaseHistory: React.FC<Props> = ({ purchases, games, onBack }) => {
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-4 rounded-full" style={{ backgroundColor: game?.color }}></div>
                     <span className="text-sm font-black text-gray-800">{game?.fullName}</span>
+                    <span className="text-[10px] font-bold text-blue-500 ml-2 bg-blue-50 px-1.5 py-0.5 rounded">
+                      {drawDateStr} {t('history.draw_date', { defaultValue: '抽せん日' })}
+                    </span>
                   </div>
                   <span className="text-[10px] font-bold text-gray-400">{date}</span>
                 </div>
@@ -83,8 +89,12 @@ const PurchaseHistory: React.FC<Props> = ({ purchases, games, onBack }) => {
                   </div>
                   {p.status === 'won' && (
                     <div className="text-right">
-                      <span className="text-[10px] font-bold text-red-400 block leading-none">{t('history.win_amount_label')}</span>
-                      <span className="text-sm font-black text-red-600">¥{p.winAmount.toLocaleString()}</span>
+                      <div className="flex flex-col">
+                        <span className="text-[10px] font-bold text-red-400 block leading-none">
+                          {p.rank ? p.rank.split(', ').map(r => t(`history.${r}`)).join(', ') : t('history.win_amount_label')}
+                        </span>
+                        <span className="text-sm font-black text-red-600">¥{p.winAmount.toLocaleString()}</span>
+                      </div>
                     </div>
                   )}
                 </div>

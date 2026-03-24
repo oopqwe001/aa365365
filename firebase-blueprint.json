@@ -70,12 +70,16 @@
     },
     "AdminConfig": {
       "title": "AdminConfig",
-      "description": "Global application configuration and winning numbers",
+      "description": "Global application configuration, winning numbers and prize settings",
       "type": "object",
       "properties": {
         "lineLink": { "type": "string" },
         "logoUrl": { "type": "string" },
-        "winningNumbers": { "type": "object" }
+        "winningNumbers": { "type": "object" },
+        "prizeSettings": {
+          "type": "object",
+          "description": "Prize amounts for different winning ranks per game"
+        }
       }
     }
   },

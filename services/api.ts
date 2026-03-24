@@ -247,6 +247,14 @@ export const lotteryApi = {
     }
   },
 
+  async updateTransaction(txId: string, data: Partial<Transaction>) {
+    try {
+      await updateDoc(doc(db, 'transactions', txId), data);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `transactions/${txId}`);
+    }
+  },
+
   async getConfig(): Promise<AdminConfig> {
     try {
       const configDoc = await getDoc(doc(db, 'config', 'global'));
@@ -269,17 +277,25 @@ export const lotteryApi = {
             '2026-03-12': [5, 12, 19, 26, 30],
             '2026-03-11': [7, 14, 21, 28, 31]
           }
+        },
+        prizeSettings: {
+          loto7: { rank1: 10000000, rank2: 100000, rank3: 1000 },
+          loto6: { rank1: 6000000, rank2: 60000, rank3: 600 },
+          miniloto: { rank1: 1000000, rank2: 10000, rank3: 100 }
         }
       };
 
       if (configDoc.exists()) {
         const data = configDoc.data() as AdminConfig;
+        // Merge with defaultConfig to ensure all fields (like prizeSettings) exist
+        const merged = { ...defaultConfig, ...data };
+        
         // If winningNumbers is empty, seed it with defaults
-        if (Object.keys(data.winningNumbers || {}).length === 0) {
-          await setDoc(doc(db, 'config', 'global'), { ...data, winningNumbers: defaultConfig.winningNumbers });
-          return { ...data, winningNumbers: defaultConfig.winningNumbers };
+        if (Object.keys(merged.winningNumbers || {}).length === 0) {
+          merged.winningNumbers = defaultConfig.winningNumbers;
+          await setDoc(doc(db, 'config', 'global'), merged);
         }
-        return data;
+        return merged;
       }
 
       await setDoc(doc(db, 'config', 'global'), defaultConfig);
@@ -351,7 +367,7 @@ export const lotteryApi = {
       const usersSnapshot = await getDocs(collection(db, 'users'));
       const users = usersSnapshot.docs.map(d => d.data() as User);
       
-      games.forEach(game => {
+      for (const game of games) {
         let drawResult = config.winningNumbers[game.id]?.[date];
         
         if (!drawResult) {
@@ -360,38 +376,67 @@ export const lotteryApi = {
           config.winningNumbers[game.id][date] = drawResult;
         }
 
-        users.forEach(user => {
+        for (const user of users) {
           let userChanged = false;
-          user.purchases.forEach(p => {
-            if (p.gameId === game.id && !p.isProcessed) {
+          for (const p of user.purchases) {
+            // 获取彩票购买时的日本时间日期 (YYYY-MM-DD)
+            const pDateStr = new Date(p.timestamp).toLocaleDateString('sv-SE', {timeZone: 'Asia/Tokyo'});
+            
+            // 只有当彩票日期在开奖日期之前（不含当天，确保“今天买，明天开”），且未处理时，才进行结算
+            if (p.gameId === game.id && !p.isProcessed && pDateStr < date) {
+              let totalPrize = 0;
+              let winningRanks: string[] = [];
+              let hasWon = false;
+
               p.numbers.forEach(pickedNumsStr => {
                 const pickedNums = pickedNumsStr.split(',').map(Number);
                 const matchCount = pickedNums.filter(n => drawResult.includes(n)).length;
                 let prize = 0;
-                if (matchCount === game.pickCount) prize = 10000000;
-                else if (matchCount === game.pickCount - 1) prize = 100000;
+                let rank = "";
+                
+                const prizeSettings = config.prizeSettings?.[game.id] || { rank1: 10000000, rank2: 100000, rank3: 1000 };
+                
+                if (matchCount === game.pickCount) {
+                  prize = prizeSettings.rank1;
+                  rank = "rank_1";
+                } else if (matchCount === game.pickCount - 1) {
+                  prize = prizeSettings.rank2;
+                  rank = "rank_2";
+                } else if (matchCount === game.pickCount - 2) {
+                  prize = prizeSettings.rank3;
+                  rank = "rank_3";
+                }
                 
                 if (prize > 0) {
-                  p.status = 'won';
-                  p.winAmount += prize;
-                  user.balance += prize;
-                } else {
-                  p.status = 'lost';
+                  totalPrize += prize;
+                  if (!winningRanks.includes(rank)) winningRanks.push(rank);
+                  hasWon = true;
                 }
               });
+
+              if (hasWon) {
+                p.status = 'won';
+                p.winAmount = totalPrize;
+                p.rank = winningRanks.join(', ');
+                user.balance += totalPrize;
+              } else {
+                p.status = 'lost';
+                p.winAmount = 0;
+              }
+              
               p.isProcessed = true;
               userChanged = true;
             }
-          });
+          }
           
           if (userChanged) {
-            updateDoc(doc(db, 'users', user.id), { 
+            await updateDoc(doc(db, 'users', user.id), { 
               balance: user.balance,
               purchases: user.purchases
             });
           }
-        });
-      });
+        }
+      }
 
       await this.saveConfig(config);
       return config;

@@ -109,6 +109,11 @@
     "draw_executed": "{{date}} の開奖と派奖が完了しました！",
     "draw_error": "開奖エラーが発生しました",
     "config_saved": "設定を保存しました",
+    "prize_settings": "当選金設定",
+    "rank1_prize": "1等当選金",
+    "rank2_prize": "2等当選金",
+    "rank3_prize": "3等当選金",
+    "prize_save_success": "当選金設定を保存しました",
     "no_access": "アクセス権限がありません",
     "no_access_desc": "管理者アカウントでログインしてください。"
   },
@@ -221,6 +226,9 @@
     "close_history": "履歴を閉じる",
     "show_more": "過去の抽せん結果をもっと見る",
     "no_more": "これ以上の履歴はありません",
-    "round": "第{{round}}回"
+    "round": "第{{round}}回",
+    "rank_1": "1等",
+    "rank_2": "2等",
+    "rank_3": "3等"
   }
 }

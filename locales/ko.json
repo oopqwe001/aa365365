@@ -109,6 +109,11 @@
     "draw_executed": "{{date}}의 추첨 및 배당이 완료되었습니다!",
     "draw_error": "추첨 오류가 발생했습니다",
     "config_saved": "설정을 저장했습니다",
+    "prize_settings": "당첨금 설정",
+    "rank1_prize": "1등 당첨금",
+    "rank2_prize": "2등 당첨금",
+    "rank3_prize": "3등 당첨금",
+    "prize_save_success": "당첨금 설정을 저장했습니다",
     "no_access": "접근 권한이 없습니다",
     "no_access_desc": "관리자 계정으로 로그인해 주세요."
   },
@@ -221,6 +226,9 @@
     "close_history": "내역 닫기",
     "show_more": "과거 추첨 결과 더 보기",
     "no_more": "더 이상의 내역이 없습니다",
-    "round": "제{{round}}회"
+    "round": "제{{round}}회",
+    "rank_1": "1등",
+    "rank_2": "2등",
+    "rank_3": "3등"
   }
 }

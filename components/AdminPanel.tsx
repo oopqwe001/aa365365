@@ -1,7 +1,7 @@
 
 import React, { useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AdminConfig, User, Transaction, LotteryGame } from '../types';
+import { AdminConfig, User, Transaction, LotteryGame, PrizeSettings } from '../types';
 
 interface Props {
   config: AdminConfig;
@@ -11,14 +11,17 @@ interface Props {
   transactions: Transaction[];
   games: LotteryGame[];
   onProcessTx: (id: string, status: 'approved' | 'rejected') => void;
+  onUpdateTransaction: (id: string, data: any) => void;
   onUpdateUser: (uid: string, data: any) => void;
   onExecuteDraw: (date: string) => void;
 }
 
-const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transactions, games, onProcessTx, onUpdateUser, onExecuteDraw }) => {
+const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transactions, games, onProcessTx, onUpdateTransaction, onUpdateUser, onExecuteDraw }) => {
   const { t } = useTranslation();
   const [tab, setTab] = useState<'dashboard' | 'users' | 'finance' | 'lottery' | 'system' | 'purchases'>('dashboard');
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [editingTx, setEditingTx] = useState<Transaction | null>(null);
+  const [showAllTxs, setShowAllTxs] = useState(false);
   
   // Calculate stats
   const totalBalance = users.reduce((sum, u) => sum + u.balance, 0);
@@ -31,8 +34,58 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
   const [editEmail, setEditEmail] = useState<string>('');
   const [editPassword, setEditPassword] = useState<string>('');
   const [editBankName, setEditBankName] = useState<string>('');
+  const [editBranchName, setEditBranchName] = useState<string>('');
+  const [editAccountNumber, setEditAccountNumber] = useState<string>('');
   const [editAccountName, setEditAccountName] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Preset Numbers State
+  const [presetGameId, setPresetGameId] = useState<string>(games[0]?.id || 'loto7');
+  const [presetDate, setPresetDate] = useState<string>(() => {
+    const now = new Date();
+    const jstNow = new Date(now.toLocaleString("en-US", {timeZone: "Asia/Tokyo"}));
+    return jstNow.toLocaleDateString('sv-SE');
+  });
+  const [presetNums, setPresetNums] = useState<string>('');
+  
+  // Local state for Prize and System settings to avoid race conditions
+  const [localPrizeSettings, setLocalPrizeSettings] = useState<PrizeSettings>(config.prizeSettings || {});
+  const [localLogoUrl, setLocalLogoUrl] = useState<string>(config.logoUrl);
+  const [localLineLink, setLocalLineLink] = useState<string>(config.lineLink);
+
+  // Sync local state when config changes from server (only if not currently editing or just once)
+  React.useEffect(() => {
+    setLocalPrizeSettings(config.prizeSettings || {});
+    setLocalLogoUrl(config.logoUrl);
+    setLocalLineLink(config.lineLink);
+  }, [config.prizeSettings, config.logoUrl, config.lineLink]);
+
+  const handleSavePreset = () => {
+    // Improve parsing to handle spaces, commas, semicolons
+    const nums = presetNums.split(/[,;\s]+/).map(n => parseInt(n.trim())).filter(n => !isNaN(n));
+    if (nums.length === 0) {
+      alert(t('admin.invalid_numbers', { defaultValue: '有効な数字を入力してください' }));
+      return;
+    }
+    
+    const newWinningNumbers = { ...config.winningNumbers };
+    if (!newWinningNumbers[presetGameId]) newWinningNumbers[presetGameId] = {};
+    newWinningNumbers[presetGameId][presetDate] = nums;
+    
+    setConfig({ ...config, winningNumbers: newWinningNumbers });
+    setPresetNums('');
+    alert(t('admin.preset_saved', { defaultValue: 'プリセットを保存しました' }));
+  };
+
+  const handleSavePrizeSettings = () => {
+    setConfig({ ...config, prizeSettings: localPrizeSettings });
+    alert('奖金设置已保存！');
+  };
+
+  const handleSaveSystemSettings = () => {
+    setConfig({ ...config, logoUrl: localLogoUrl, lineLink: localLineLink });
+    alert('系统设置已保存！');
+  };
 
   const startEditing = (u: User) => {
     setEditingUser(u);
@@ -58,6 +111,34 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
       }
     });
     setEditingUser(null);
+  };
+
+  const startEditingTx = (tx: Transaction) => {
+    setEditingTx(tx);
+    if (tx.bankDetails) {
+      setEditBankName(tx.bankDetails.bankName || '');
+      setEditBranchName(tx.bankDetails.branchName || '');
+      setEditAccountNumber(tx.bankDetails.accountNumber || '');
+      setEditAccountName(tx.bankDetails.accountName || '');
+    } else {
+      setEditBankName('');
+      setEditBranchName('');
+      setEditAccountNumber('');
+      setEditAccountName('');
+    }
+  };
+
+  const handleSaveTx = () => {
+    if (!editingTx) return;
+    onUpdateTransaction(editingTx.id, {
+      bankDetails: {
+        bankName: editBankName,
+        branchName: editBranchName,
+        accountNumber: editAccountNumber,
+        accountName: editAccountName
+      }
+    });
+    setEditingTx(null);
   };
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -193,6 +274,72 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
 
           {tab === 'lottery' && (
             <div className="max-w-4xl space-y-6">
+              {/* 当せん金设定模块 */}
+              <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="text-slate-900 font-black text-base flex items-center gap-2">
+                    <i className="fas fa-coins text-yellow-500"></i> {t('admin.prize_settings')}
+                  </h3>
+                  <button 
+                    onClick={handleSavePrizeSettings}
+                    className="bg-emerald-600 text-white px-6 py-2 rounded-xl text-xs font-black hover:bg-emerald-700 shadow-lg shadow-emerald-200 transition-all"
+                  >
+                    {t('common.save')}
+                  </button>
+                </div>
+                <div className="space-y-6">
+                  {games.map(game => (
+                    <div key={game.id} className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                      <div className="text-sm font-black text-slate-800 mb-4 flex items-center gap-2">
+                        <div className="w-2 h-4 rounded-full" style={{ backgroundColor: game.color }}></div>
+                        {game.name}
+                      </div>
+                      <div className="grid grid-cols-3 gap-4">
+                        <div>
+                          <label className="block text-[10px] text-slate-400 font-bold mb-1 uppercase">{t('admin.rank1_prize')}</label>
+                          <input 
+                            type="number" 
+                            className="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs font-black text-blue-600 outline-none focus:ring-2 ring-blue-500/20"
+                            value={localPrizeSettings[game.id]?.rank1 || 0}
+                            onChange={e => {
+                              const newSettings = { ...localPrizeSettings };
+                              newSettings[game.id] = { ...newSettings[game.id], rank1: parseInt(e.target.value) || 0 };
+                              setLocalPrizeSettings(newSettings);
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] text-slate-400 font-bold mb-1 uppercase">{t('admin.rank2_prize')}</label>
+                          <input 
+                            type="number" 
+                            className="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs font-black text-blue-600 outline-none focus:ring-2 ring-blue-500/20"
+                            value={localPrizeSettings[game.id]?.rank2 || 0}
+                            onChange={e => {
+                              const newSettings = { ...localPrizeSettings };
+                              newSettings[game.id] = { ...newSettings[game.id], rank2: parseInt(e.target.value) || 0 };
+                              setLocalPrizeSettings(newSettings);
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] text-slate-400 font-bold mb-1 uppercase">{t('admin.rank3_prize')}</label>
+                          <input 
+                            type="number" 
+                            className="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs font-black text-blue-600 outline-none focus:ring-2 ring-blue-500/20"
+                            value={localPrizeSettings[game.id]?.rank3 || 0}
+                            onChange={e => {
+                              const newSettings = { ...localPrizeSettings };
+                              newSettings[game.id] = { ...newSettings[game.id], rank3: parseInt(e.target.value) || 0 };
+                              setLocalPrizeSettings(newSettings);
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               {/* 自动化开奖模块 */}
               <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm bg-gradient-to-br from-white to-slate-50">
                 <div className="flex justify-between items-start mb-6">
@@ -206,11 +353,12 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
                   </div>
                 </div>
                 <div className="flex gap-4">
-                   <input type="date" className="bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:ring-2 ring-blue-500/20" defaultValue={new Date().toISOString().split('T')[0]} id="exec-date" />
+                   <input type="date" className="bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:ring-2 ring-blue-500/20" defaultValue={new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Tokyo"})).toLocaleDateString('sv-SE')} id="exec-date" />
                    <button 
                     onClick={() => {
                       const dateVal = (document.getElementById('exec-date') as HTMLInputElement).value;
                       onExecuteDraw(dateVal);
+                      alert(t('admin.draw_executed', { date: dateVal }));
                     }}
                     className="flex-1 bg-orange-500 text-white py-3 rounded-xl font-black text-sm hover:bg-orange-600 shadow-lg shadow-orange-200 transition-all flex items-center justify-center gap-2"
                    >
@@ -224,29 +372,95 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
                   <h3 className="text-slate-900 font-black text-base flex items-center gap-2">
                     <i className="fas fa-edit text-blue-500"></i> {t('admin.preset_numbers')}
                   </h3>
-                  <span className="text-xs text-slate-400 italic">{t('admin.auto_update_notice')}</span>
+                  <span className="text-xs text-slate-400 italic">{t('admin.execute_draw_desc')}</span>
                 </div>
                 <div className="grid grid-cols-2 gap-6 mb-6">
                   <div>
                     <label className="block text-[11px] text-slate-400 font-bold mb-2 uppercase">{t('admin.game_type')}</label>
-                    <select className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none focus:ring-2 ring-blue-500/20">
-                      <option>LOTO 7</option>
-                      <option>LOTO 6</option>
-                      <option>MINI LOTO</option>
+                    <select 
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none focus:ring-2 ring-blue-500/20"
+                      value={presetGameId}
+                      onChange={(e) => setPresetGameId(e.target.value)}
+                    >
+                      {games.map(g => (
+                        <option key={g.id} value={g.id}>{g.name}</option>
+                      ))}
                     </select>
                   </div>
                   <div>
                     <label className="block text-[11px] text-slate-400 font-bold mb-2 uppercase">{t('admin.effective_date')}</label>
-                    <input type="date" className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none focus:ring-2 ring-blue-500/20" defaultValue="2024-05-23" />
+                    <input 
+                      type="date" 
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none focus:ring-2 ring-blue-500/20" 
+                      value={presetDate}
+                      onChange={(e) => setPresetDate(e.target.value)}
+                    />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-[11px] text-slate-400 font-bold mb-2 uppercase">{t('admin.bet_numbers')}</label>
-                  <input type="text" placeholder={t('admin.winning_numbers_placeholder')} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-base font-black tracking-widest text-blue-600 outline-none focus:ring-2 ring-blue-500/20" />
+                  <label className="block text-[11px] text-slate-400 font-bold mb-2 uppercase">{t('admin.bet_numbers')} ({t('admin.winning_numbers_placeholder')})</label>
+                  <input 
+                    type="text" 
+                    placeholder={t('admin.winning_numbers_placeholder')} 
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-base font-black tracking-widest text-blue-600 outline-none focus:ring-2 ring-blue-500/20" 
+                    value={presetNums}
+                    onChange={(e) => setPresetNums(e.target.value)}
+                  />
                 </div>
-                <button className="mt-6 w-full bg-blue-600 text-white py-4 rounded-xl font-black text-sm hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all">
+                <button 
+                  onClick={handleSavePreset}
+                  className="mt-6 w-full bg-blue-600 text-white py-4 rounded-xl font-black text-sm hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all"
+                >
                   {t('admin.save_preset')}
                 </button>
+
+                {/* 已预设的号码列表 */}
+                <div className="mt-8 border-t border-slate-100 pt-6">
+                  <h4 className="text-xs font-black text-slate-400 uppercase mb-4 flex items-center gap-2">
+                    <i className="fas fa-list-ul"></i> {t('admin.upcoming_draws', { defaultValue: '今後の抽せん予定' })}
+                  </h4>
+                  <div className="space-y-2">
+                    {Object.keys(config.winningNumbers).map(gameId => {
+                      const game = games.find(g => g.id === gameId);
+                      const dates = Object.keys(config.winningNumbers[gameId])
+                        .filter(d => d >= new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Tokyo"})).toLocaleDateString('sv-SE'))
+                        .sort();
+                      
+                      if (dates.length === 0) return null;
+
+                      return (
+                        <div key={gameId} className="space-y-2">
+                          <div className="text-[10px] font-black text-slate-500 flex items-center gap-1">
+                            <div className="w-1 h-3 rounded-full" style={{ backgroundColor: game?.color }}></div>
+                            {game?.name}
+                          </div>
+                          {dates.map(date => (
+                            <div key={date} className="flex justify-between items-center bg-slate-50 p-2 rounded-lg border border-slate-100">
+                              <span className="text-xs font-bold text-slate-600">{date}</span>
+                              <div className="flex gap-1">
+                                {Array.isArray(config.winningNumbers[gameId][date]) && config.winningNumbers[gameId][date].map((n, i) => (
+                                  <span key={i} className="w-5 h-5 rounded-full bg-white border border-slate-200 flex items-center justify-center text-[10px] font-black text-blue-600">
+                                    {n}
+                                  </span>
+                                ))}
+                              </div>
+                              <button 
+                                onClick={() => {
+                                  const newWinningNumbers = { ...config.winningNumbers };
+                                  delete newWinningNumbers[gameId][date];
+                                  setConfig({ ...config, winningNumbers: newWinningNumbers });
+                                }}
+                                className="text-rose-500 hover:text-rose-600 p-1"
+                              >
+                                <i className="fas fa-trash-alt text-[10px]"></i>
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -254,12 +468,20 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
           {tab === 'finance' && (
             <div className="space-y-4">
               <div className="flex justify-between items-end mb-4">
-                 <h3 className="text-slate-900 font-black text-base">{t('admin.pending_requests')}</h3>
-                 <span className="text-xs font-bold text-slate-400">{t('admin.total_bets', { count: transactions.filter(t => t.status === 'pending').length })}</span>
+                 <h3 className="text-slate-900 font-black text-base">{showAllTxs ? t('admin.recent_transactions') : t('admin.pending_requests')}</h3>
+                 <div className="flex items-center gap-4">
+                    <button 
+                      onClick={() => setShowAllTxs(!showAllTxs)}
+                      className={`text-xs font-bold px-3 py-1 rounded-full border transition-all ${showAllTxs ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-500 border-slate-200'}`}
+                    >
+                      {showAllTxs ? t('admin.all_purchase_records') : t('admin.pending_requests')}
+                    </button>
+                    <span className="text-xs font-bold text-slate-400">{t('admin.total_bets', { count: transactions.filter(t => showAllTxs ? true : t.status === 'pending').length })}</span>
+                 </div>
               </div>
               
               <div className="grid grid-cols-1 gap-3">
-                {transactions.filter(t => t.status === 'pending').map(tx => (
+                {transactions.filter(t => showAllTxs ? true : t.status === 'pending').map(tx => (
                   <div key={tx.id} className="bg-white rounded-2xl p-5 border border-slate-200 flex justify-between items-center group hover:border-blue-200 transition-all shadow-sm">
                     <div className="flex items-center gap-5">
                       <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-xl ${tx.type === 'deposit' ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}`}>
@@ -272,28 +494,46 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
                           </span>
                           <span className="text-xs text-slate-500 font-bold">{t('admin.member_id')}: {tx.userId}</span>
                           <span className="text-[10px] text-slate-400 font-medium">{new Date(tx.timestamp).toLocaleString()}</span>
+                          <span className={`text-[10px] font-black px-2 py-0.5 rounded ${tx.status === 'approved' ? 'bg-emerald-100 text-emerald-600' : tx.status === 'pending' ? 'bg-orange-100 text-orange-600' : 'bg-rose-100 text-rose-600'}`}>
+                            {tx.status === 'approved' ? t('admin.drawn') : tx.status === 'pending' ? t('admin.waiting') : t('admin.reject')}
+                          </span>
                         </div>
                         <div className="text-xl font-black text-slate-900">¥ {tx.amount.toLocaleString()}</div>
                         {tx.bankDetails && (
-                          <div className="mt-3 text-[11px] bg-slate-50 p-3 rounded-lg border border-slate-100 text-slate-600">
+                          <div className="mt-3 text-[11px] bg-slate-50 p-3 rounded-lg border border-slate-100 text-slate-600 relative group/bank">
                              <div className="grid grid-cols-2 gap-x-4 gap-y-1">
                                 <div><span className="text-slate-400">{t('finance.bank_name')}:</span> {tx.bankDetails.bankName}</div>
                                 <div><span className="text-slate-400">{t('finance.branch_name')}:</span> {tx.bankDetails.branchName}</div>
                                 <div><span className="text-slate-400">{t('finance.account_number')}:</span> {tx.bankDetails.accountNumber}</div>
                                 <div><span className="text-slate-400">{t('finance.account_name')}:</span> {tx.bankDetails.accountName}</div>
                              </div>
+                             <button 
+                              onClick={() => startEditingTx(tx)}
+                              className="absolute top-2 right-2 opacity-0 group-hover/bank:opacity-100 transition-opacity text-blue-600 hover:text-blue-700"
+                             >
+                               <i className="fas fa-edit"></i>
+                             </button>
                           </div>
                         )}
                       </div>
                     </div>
                     <div className="flex gap-2">
-                      <button onClick={() => onProcessTx(tx.id, 'rejected')} className="bg-rose-50 text-rose-600 border border-rose-100 px-5 py-2.5 rounded-xl text-xs font-black hover:bg-rose-100 transition-all">{t('admin.reject')}</button>
-                      <button onClick={() => onProcessTx(tx.id, 'approved')} className="bg-emerald-600 text-white px-8 py-2.5 rounded-xl text-xs font-black hover:bg-emerald-700 shadow-lg shadow-emerald-200 transition-all">{t('admin.approve_and_credit')}</button>
+                      {tx.status === 'pending' && (
+                        <>
+                          <button onClick={() => onProcessTx(tx.id, 'rejected')} className="bg-rose-50 text-rose-600 border border-rose-100 px-5 py-2.5 rounded-xl text-xs font-black hover:bg-rose-100 transition-all">{t('admin.reject')}</button>
+                          <button onClick={() => onProcessTx(tx.id, 'approved')} className="bg-emerald-600 text-white px-8 py-2.5 rounded-xl text-xs font-black hover:bg-emerald-700 shadow-lg shadow-emerald-200 transition-all">{t('admin.approve_and_credit')}</button>
+                        </>
+                      )}
+                      {tx.status !== 'pending' && (
+                        <button onClick={() => startEditingTx(tx)} className="bg-slate-50 text-slate-500 border border-slate-200 px-5 py-2.5 rounded-xl text-xs font-black hover:bg-slate-100 transition-all">
+                          <i className="fas fa-edit mr-1"></i> {t('admin.edit_user')}
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}
 
-                {transactions.filter(t => t.status === 'pending').length === 0 && (
+                {transactions.filter(t => showAllTxs ? true : t.status === 'pending').length === 0 && (
                    <div className="py-20 flex flex-col items-center justify-center opacity-20 text-slate-400">
                       <i className="fas fa-check-circle text-6xl mb-4"></i>
                       <p className="font-bold">{t('admin.no_pending')}</p>
@@ -352,7 +592,11 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
                                 {p.isProcessed ? t('admin.drawn') : t('admin.waiting')}
                               </span>
                               {p.winAmount > 0 && (
-                                <span className="text-emerald-600 font-black">{t('admin.won')}: ¥{p.winAmount.toLocaleString()}</span>
+                                <div className="flex flex-col">
+                                  <span className="text-emerald-600 font-black">
+                                    {p.rank ? p.rank.split(', ').map(r => t(`history.${r}`)).join(', ') : t('admin.won')}: ¥{p.winAmount.toLocaleString()}
+                                  </span>
+                                </div>
                               )}
                               {p.isProcessed && p.winAmount === 0 && (
                                 <span className="text-slate-400 text-[10px]">{t('admin.lost')}</span>
@@ -476,8 +720,8 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
                     <input 
                       type="text" 
                       className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 ring-blue-500/20"
-                      value={config.logoUrl}
-                      onChange={e => setConfig({...config, logoUrl: e.target.value})}
+                      value={localLogoUrl}
+                      onChange={e => setLocalLogoUrl(e.target.value)}
                     />
                   </div>
                 </div>
@@ -491,12 +735,15 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
                     <input 
                       type="text" 
                       className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm font-bold text-blue-600 outline-none focus:ring-2 ring-blue-500/20"
-                      value={config.lineLink}
-                      onChange={e => setConfig({...config, lineLink: e.target.value})}
+                      value={localLineLink}
+                      onChange={e => setLocalLineLink(e.target.value)}
                     />
                   </div>
                   <div className="pt-4 border-t border-slate-100">
-                    <button className="w-full bg-emerald-600 text-white py-3.5 rounded-xl font-black text-sm hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200">
+                    <button 
+                      onClick={handleSaveSystemSettings}
+                      className="w-full bg-emerald-600 text-white py-3.5 rounded-xl font-black text-sm hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200"
+                    >
                       {t('admin.apply_settings')}
                     </button>
                   </div>
@@ -506,6 +753,66 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
           )}
         </main>
       </div>
+
+      {/* 交易编辑模态框 */}
+      {editingTx && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[110] p-4">
+          <div className="bg-white w-full max-w-lg rounded-3xl p-8 shadow-2xl border border-slate-200 relative">
+            <button onClick={() => setEditingTx(null)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-600 transition-colors"><i className="fas fa-times text-xl"></i></button>
+            <h3 className="text-xl font-black text-slate-900 mb-8 flex items-center gap-3">
+               {t('admin.edit_user_title')}: {editingTx.id}
+            </h3>
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] text-slate-400 font-black mb-2 uppercase">{t('finance.bank_name')}</label>
+                  <input 
+                    type="text" 
+                    className="w-full bg-slate-50 border border-slate-200 p-3.5 rounded-xl text-sm font-bold focus:ring-2 ring-blue-500/20 outline-none" 
+                    value={editBankName}
+                    onChange={e => setEditBankName(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] text-slate-400 font-black mb-2 uppercase">{t('finance.branch_name')}</label>
+                  <input 
+                    type="text" 
+                    className="w-full bg-slate-50 border border-slate-200 p-3.5 rounded-xl text-sm font-bold focus:ring-2 ring-blue-500/20 outline-none" 
+                    value={editBranchName}
+                    onChange={e => setEditBranchName(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] text-slate-400 font-black mb-2 uppercase">{t('finance.account_number')}</label>
+                  <input 
+                    type="text" 
+                    className="w-full bg-slate-50 border border-slate-200 p-3.5 rounded-xl text-sm font-bold focus:ring-2 ring-blue-500/20 outline-none" 
+                    value={editAccountNumber}
+                    onChange={e => setEditAccountNumber(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] text-slate-400 font-black mb-2 uppercase">{t('finance.account_name')}</label>
+                  <input 
+                    type="text" 
+                    className="w-full bg-slate-50 border border-slate-200 p-3.5 rounded-xl text-sm font-bold focus:ring-2 ring-blue-500/20 outline-none" 
+                    value={editAccountName}
+                    onChange={e => setEditAccountName(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-4 pt-4">
+                 <button onClick={() => setEditingTx(null)} className="flex-1 py-4 bg-slate-100 text-slate-500 rounded-2xl font-black text-sm hover:bg-slate-200 transition-all">{t('common.cancel')}</button>
+                 <button onClick={handleSaveTx} className="flex-1 py-4 bg-blue-600 text-white rounded-2xl font-black text-sm hover:bg-blue-700 shadow-xl shadow-blue-200 transition-all">{t('admin.save_changes')}</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 会员编辑模态框 */}
       {editingUser && (

@@ -29,6 +29,7 @@ export interface Purchase {
   isProcessed: boolean;
   status: 'pending' | 'won' | 'lost';
   winAmount: number;
+  rank?: string; // e.g. "1等", "2等", "3等"
 }
 
 export interface Transaction {
@@ -41,6 +42,14 @@ export interface Transaction {
   bankDetails?: BankInfo; 
 }
 
+export interface PrizeSettings {
+  [gameId: string]: {
+    rank1: number;
+    rank2: number;
+    rank3: number;
+  }
+}
+
 export interface AdminConfig {
   lineLink: string;
   logoUrl: string;
@@ -49,6 +58,7 @@ export interface AdminConfig {
       [date: string]: number[];
     }
   };
+  prizeSettings?: PrizeSettings;
 }
 
 export interface LotteryGame {
