@@ -46,7 +46,6 @@ const Navbar: React.FC<Props> = ({ user, view, logoUrl, onLoginView, onRegisterV
               <div className="bg-[#e60012] px-1 py-0.5 rounded-sm">
                  <span className="text-white text-[12px] font-black italic tracking-tighter leading-none">LOTO</span>
               </div>
-              <span className="text-[15px] font-[900] text-gray-800 tracking-tighter">{t('home.title')}</span>
             </div>
           </div>
         )}
