@@ -113,6 +113,9 @@
     "rank1_prize": "1등 당첨금",
     "rank2_prize": "2등 당첨금",
     "rank3_prize": "3등 당첨금",
+    "rank4_prize": "4등 당첨금",
+    "rank5_prize": "5등 당첨금",
+    "rank6_prize": "6등 당첨금",
     "prize_save_success": "당첨금 설정을 저장했습니다",
     "no_access": "접근 권한이 없습니다",
     "no_access_desc": "관리자 계정으로 로그인해 주세요."
@@ -229,6 +232,20 @@
     "round": "제{{round}}회",
     "rank_1": "1등",
     "rank_2": "2등",
-    "rank_3": "3등"
+    "rank_3": "3등",
+    "rank_4": "4등",
+    "rank_5": "5등",
+    "rank_6": "6등"
+  },
+  "share": {
+    "title": "당첨 증명서",
+    "congrats": "축하합니다!",
+    "game_label": "복권 종류",
+    "date_label": "추첨 일시",
+    "rank_label": "당첨 등수",
+    "amount_label": "당첨 금액",
+    "btn_share": "공유하기",
+    "btn_save": "저장하기",
+    "disclaimer": "이것은 귀하의 당첨 기록을 나타내는 디지털 증명서입니다. 계정 보안을 유지해 주세요."
   }
 }

@@ -20,6 +20,7 @@ import TransactionHistory from '@/components/TransactionHistory';
 import PurchaseHistory from '@/components/PurchaseHistoryList';
 import RegisterView from '@/components/RegisterView';
 import LoginView from '@/components/LoginView';
+import ShareWinView from '@/components/ShareWinView';
 
 const GAMES_DATA: Omit<LotteryGame, 'fullName' | 'drawDayText' | 'maxJackpot'>[] = [
   { id: 'loto7', name: 'LOTO 7', drawDayIcon: '全', price: 300, maxNumber: 37, pickCount: 7, color: '#e60012', colorSecondary: '#005bac' },
@@ -37,6 +38,7 @@ const App: React.FC = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [adminConfig, setAdminConfig] = useState<AdminConfig | null>(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
+  const [selectedPurchase, setSelectedPurchase] = useState<Purchase | null>(null);
 
   const GAMES: LotteryGame[] = GAMES_DATA.map(g => ({
     ...g,
@@ -346,7 +348,8 @@ const App: React.FC = () => {
           {view === 'deposit' && <DepositView onBack={() => setView('mypage')} onSubmit={handleDepositSubmit} />}
           {view === 'withdraw' && <WithdrawForm onBack={() => setView('mypage')} onSubmit={handleWithdrawSubmit} />}
           {view === 'transactions' && <TransactionHistory userId={activeUser.id} transactions={transactions} onBack={() => setView('mypage')} />}
-          {view === 'purchases' && <PurchaseHistory purchases={activeUser.purchases} games={GAMES} onBack={() => setView('mypage')} />}
+          {view === 'purchases' && <PurchaseHistory purchases={activeUser.purchases} games={GAMES} onBack={() => setView('mypage')} onShare={(p) => { setSelectedPurchase(p); setView('share-win'); }} />}
+          {view === 'share-win' && selectedPurchase && <ShareWinView purchase={selectedPurchase} game={GAMES.find(g => g.id === selectedPurchase.gameId)} onBack={() => setView('purchases')} />}
           {view === 'register' && <RegisterView onBack={() => setView('home')} onSuccess={handleRegister} />}
           {view === 'login' && <LoginView onBack={() => setView('home')} onSuccess={handleLogin} onGoToRegister={() => setView('register')} />}
           {view === 'admin' && isAdmin && (

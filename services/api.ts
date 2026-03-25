@@ -288,9 +288,9 @@ export const lotteryApi = {
           }
         },
         prizeSettings: {
-          loto7: { rank1: 10000000, rank2: 100000, rank3: 1000 },
-          loto6: { rank1: 6000000, rank2: 60000, rank3: 600 },
-          miniloto: { rank1: 1000000, rank2: 10000, rank3: 100 }
+          loto7: { rank1: 10000000, rank2: 100000, rank3: 1000, rank4: 500, rank5: 200, rank6: 100 },
+          loto6: { rank1: 6000000, rank2: 60000, rank3: 600, rank4: 300, rank5: 100 },
+          miniloto: { rank1: 1000000, rank2: 10000, rank3: 100, rank4: 50 }
         }
       };
 
@@ -411,6 +411,15 @@ export const lotteryApi = {
                 } else if (matchCount === game.pickCount - 2) {
                   prize = prizeSettings.rank3;
                   rank = "rank_3";
+                } else if (matchCount === game.pickCount - 3 && prizeSettings.rank4) {
+                  prize = prizeSettings.rank4;
+                  rank = "rank_4";
+                } else if (matchCount === game.pickCount - 4 && prizeSettings.rank5) {
+                  prize = prizeSettings.rank5;
+                  rank = "rank_5";
+                } else if (matchCount === game.pickCount - 5 && prizeSettings.rank6) {
+                  prize = prizeSettings.rank6;
+                  rank = "rank_6";
                 }
                 
                 if (prize > 0) {

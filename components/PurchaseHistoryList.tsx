@@ -7,9 +7,10 @@ interface Props {
   purchases: Purchase[];
   games: LotteryGame[];
   onBack: () => void;
+  onShare: (purchase: Purchase) => void;
 }
 
-const PurchaseHistory: React.FC<Props> = ({ purchases, games, onBack }) => {
+const PurchaseHistory: React.FC<Props> = ({ purchases, games, onBack, onShare }) => {
   const { t, i18n } = useTranslation();
   const getGame = (id: string) => games.find(g => g.id === id);
 
@@ -34,7 +35,9 @@ const PurchaseHistory: React.FC<Props> = ({ purchases, games, onBack }) => {
           sortedPurchases.map((p) => {
             const game = getGame(p.gameId);
             const pDate = new Date(p.timestamp);
-            const drawDateStr = new Date(pDate.toLocaleString("en-US", {timeZone: "Asia/Tokyo"})).toLocaleDateString('sv-SE');
+            const drawDate = new Date(pDate.toLocaleString("en-US", {timeZone: "Asia/Tokyo"}));
+            drawDate.setDate(drawDate.getDate() + 1);
+            const drawDateStr = drawDate.toLocaleDateString('sv-SE');
 
             const date = pDate.toLocaleString(i18n.language === 'ko' ? 'ko-KR' : 'ja-JP', {
               month: '2-digit',
@@ -88,12 +91,20 @@ const PurchaseHistory: React.FC<Props> = ({ purchases, games, onBack }) => {
                     </span>
                   </div>
                   {p.status === 'won' && (
-                    <div className="text-right">
-                      <div className="flex flex-col">
-                        <span className="text-[10px] font-bold text-red-400 block leading-none">
-                          {p.rank ? p.rank.split(', ').map(r => t(`history.${r}`)).join(', ') : t('history.win_amount_label')}
-                        </span>
-                        <span className="text-sm font-black text-red-600">¥{p.winAmount.toLocaleString()}</span>
+                    <div className="flex items-center gap-3">
+                      <button 
+                        onClick={() => onShare(p)}
+                        className="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center text-red-500 active:scale-90 transition-transform"
+                      >
+                        <i className="fas fa-share-alt text-xs"></i>
+                      </button>
+                      <div className="text-right">
+                        <div className="flex flex-col">
+                          <span className="text-[10px] font-bold text-red-400 block leading-none">
+                            {p.rank ? p.rank.split(', ').map(r => t(`history.${r}`)).join(', ') : t('history.win_amount_label')}
+                          </span>
+                          <span className="text-sm font-black text-red-600">¥{p.winAmount.toLocaleString()}</span>
+                        </div>
                       </div>
                     </div>
                   )}

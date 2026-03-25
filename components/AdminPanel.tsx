@@ -369,6 +369,54 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
                             }}
                           />
                         </div>
+                        {/* Rank 4 */}
+                        {(game.id === 'loto7' || game.id === 'loto6' || game.id === 'miniloto') && (
+                          <div>
+                            <label className="block text-[10px] text-slate-400 font-bold mb-1 uppercase">{t('admin.rank4_prize')}</label>
+                            <input 
+                              type="number" 
+                              className="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs font-black text-blue-600 outline-none focus:ring-2 ring-blue-500/20"
+                              value={config.prizeSettings?.[game.id]?.rank4 || 0}
+                              onChange={e => {
+                                const newSettings = { ...config.prizeSettings };
+                                newSettings[game.id] = { ...newSettings[game.id], rank4: parseInt(e.target.value) || 0 };
+                                setConfig({ ...config, prizeSettings: newSettings });
+                              }}
+                            />
+                          </div>
+                        )}
+                        {/* Rank 5 */}
+                        {(game.id === 'loto7' || game.id === 'loto6') && (
+                          <div>
+                            <label className="block text-[10px] text-slate-400 font-bold mb-1 uppercase">{t('admin.rank5_prize')}</label>
+                            <input 
+                              type="number" 
+                              className="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs font-black text-blue-600 outline-none focus:ring-2 ring-blue-500/20"
+                              value={config.prizeSettings?.[game.id]?.rank5 || 0}
+                              onChange={e => {
+                                const newSettings = { ...config.prizeSettings };
+                                newSettings[game.id] = { ...newSettings[game.id], rank5: parseInt(e.target.value) || 0 };
+                                setConfig({ ...config, prizeSettings: newSettings });
+                              }}
+                            />
+                          </div>
+                        )}
+                        {/* Rank 6 */}
+                        {game.id === 'loto7' && (
+                          <div>
+                            <label className="block text-[10px] text-slate-400 font-bold mb-1 uppercase">{t('admin.rank6_prize')}</label>
+                            <input 
+                              type="number" 
+                              className="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs font-black text-blue-600 outline-none focus:ring-2 ring-blue-500/20"
+                              value={config.prizeSettings?.[game.id]?.rank6 || 0}
+                              onChange={e => {
+                                const newSettings = { ...config.prizeSettings };
+                                newSettings[game.id] = { ...newSettings[game.id], rank6: parseInt(e.target.value) || 0 };
+                                setConfig({ ...config, prizeSettings: newSettings });
+                              }}
+                            />
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}

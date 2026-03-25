@@ -1,5 +1,5 @@
 
-export type AppView = 'home' | 'summary' | 'picker' | 'history' | 'mypage' | 'admin' | 'withdraw' | 'deposit' | 'transactions' | 'login' | 'register' | 'purchases';
+export type AppView = 'home' | 'summary' | 'picker' | 'history' | 'mypage' | 'admin' | 'withdraw' | 'deposit' | 'transactions' | 'login' | 'register' | 'purchases' | 'share-win';
 
 export interface BankInfo {
   bankName: string;
@@ -48,6 +48,9 @@ export interface PrizeSettings {
     rank1: number;
     rank2: number;
     rank3: number;
+    rank4?: number;
+    rank5?: number;
+    rank6?: number;
   }
 }
 
@@ -82,4 +85,3 @@ export interface Selection {
   count: number;
   duration: number;
 }
-

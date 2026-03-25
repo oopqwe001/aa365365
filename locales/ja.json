@@ -113,6 +113,9 @@
     "rank1_prize": "1等当選金",
     "rank2_prize": "2等当選金",
     "rank3_prize": "3等当選金",
+    "rank4_prize": "4等当選金",
+    "rank5_prize": "5等当選金",
+    "rank6_prize": "6等当選金",
     "prize_save_success": "当選金設定を保存しました",
     "no_access": "アクセス権限がありません",
     "no_access_desc": "管理者アカウントでログインしてください。"
@@ -229,6 +232,20 @@
     "round": "第{{round}}回",
     "rank_1": "1等",
     "rank_2": "2等",
-    "rank_3": "3等"
+    "rank_3": "3等",
+    "rank_4": "4等",
+    "rank_5": "5等",
+    "rank_6": "6等"
+  },
+  "share": {
+    "title": "当選証明書",
+    "congrats": "おめでとうございます！",
+    "game_label": "宝くじの種類",
+    "date_label": "抽せん日時",
+    "rank_label": "当選等級",
+    "amount_label": "当選金額",
+    "btn_share": "シェアする",
+    "btn_save": "保存する",
+    "disclaimer": "これはあなたの当選記録のデジタル証明書です。アカウントの安全を確保してください。"
   }
 }
