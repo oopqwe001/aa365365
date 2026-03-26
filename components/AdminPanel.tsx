@@ -56,6 +56,17 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
     setPresetNums('');
   };
 
+  const handleDeletePreset = (gameId: string, date: string) => {
+    const newWinningNumbers = { ...config.winningNumbers };
+    if (newWinningNumbers[gameId]) {
+      delete newWinningNumbers[gameId][date];
+      if (Object.keys(newWinningNumbers[gameId]).length === 0) {
+        delete newWinningNumbers[gameId];
+      }
+      setConfig({ ...config, winningNumbers: newWinningNumbers });
+    }
+  };
+
   const startEditing = (u: User) => {
     setEditingUser(u);
     setEditBalance(u.balance.toString());
@@ -315,6 +326,67 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
                 >
                   {t('admin.save_preset')}
                 </button>
+              </div>
+
+              {/* 预设号码记录列表 (仅显示今日及未来) */}
+              <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+                <h3 className="text-slate-900 font-black text-base flex items-center gap-2 mb-6">
+                  <i className="fas fa-calendar-check text-blue-500"></i> {t('admin.active_presets', { defaultValue: '明日の予約番号' })}
+                </h3>
+                <div className="space-y-3">
+                  {Object.entries(config.winningNumbers || {}).flatMap(([gameId, dates]) => 
+                    Object.entries(dates).map(([date, nums]) => ({ gameId, date, nums }))
+                  ).filter(preset => {
+                    const jstNow = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Tokyo"}));
+                    const tomorrow = new Date(jstNow);
+                    tomorrow.setDate(tomorrow.getDate() + 1);
+                    const tomorrowStr = tomorrow.toLocaleDateString('sv-SE');
+                    // 仅显示明天的预设号码
+                    return preset.date === tomorrowStr;
+                  }).sort((a, b) => a.date.localeCompare(b.date)).map((preset, idx) => {
+                    const game = games.find(g => g.id === preset.gameId);
+                    return (
+                      <div key={idx} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100 hover:border-blue-200 transition-all">
+                        <div className="flex items-center gap-4">
+                          <div className="w-2 h-8 rounded-full" style={{ backgroundColor: game?.color || '#ccc' }}></div>
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-xs font-black text-slate-900">{game?.name || preset.gameId}</span>
+                              <span className="text-[10px] text-slate-400 font-bold">{preset.date}</span>
+                            </div>
+                            <div className="flex gap-1">
+                              {preset.nums.map((n, i) => (
+                                <span key={i} className="w-6 h-6 rounded-full bg-white border border-slate-200 flex items-center justify-center text-[10px] font-black text-blue-600">
+                                  {n}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                        <button 
+                          onClick={() => handleDeletePreset(preset.gameId, preset.date)}
+                          className="text-rose-500 hover:text-rose-600 p-2 transition-colors"
+                          title={t('admin.delete_preset')}
+                        >
+                          <i className="fas fa-trash-alt"></i>
+                        </button>
+                      </div>
+                    );
+                  })}
+                  {(!config.winningNumbers || Object.entries(config.winningNumbers).flatMap(([gameId, dates]) => 
+                    Object.entries(dates).map(([date, nums]) => ({ gameId, date, nums }))
+                  ).filter(preset => {
+                    const jstNow = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Tokyo"}));
+                    const tomorrow = new Date(jstNow);
+                    tomorrow.setDate(tomorrow.getDate() + 1);
+                    const tomorrowStr = tomorrow.toLocaleDateString('sv-SE');
+                    return preset.date === tomorrowStr;
+                  }).length === 0) && (
+                    <div className="py-10 text-center text-slate-300 italic text-xs">
+                      {t('admin.no_presets')}
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* 当せん金設定模块 */}

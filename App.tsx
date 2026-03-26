@@ -40,6 +40,17 @@ const App: React.FC = () => {
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [selectedPurchase, setSelectedPurchase] = useState<Purchase | null>(null);
 
+  const adminConfigRef = React.useRef<AdminConfig | null>(null);
+  const allUsersRef = React.useRef<User[]>([]);
+
+  useEffect(() => {
+    adminConfigRef.current = adminConfig;
+  }, [adminConfig]);
+
+  useEffect(() => {
+    allUsersRef.current = allUsers;
+  }, [allUsers]);
+
   const GAMES: LotteryGame[] = GAMES_DATA.map(g => ({
     ...g,
     fullName: t(`games.${g.id}.fullName`),
@@ -109,16 +120,18 @@ const App: React.FC = () => {
   // Auto Draw Logic
   const isDrawingRef = React.useRef(false);
   useEffect(() => {
-    if (!adminConfig || isDrawingRef.current) return;
+    if (!isAuthReady) return;
 
     const runAutoDraw = async () => {
-      if (isDrawingRef.current) return;
+      const currentConfig = adminConfigRef.current;
+      const currentUsers = allUsersRef.current;
+      
+      if (!currentConfig || isDrawingRef.current) return;
       isDrawingRef.current = true;
 
       try {
         // 使用日本标准时间 (JST) 进行判断
         const jstNow = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Tokyo"}));
-        const jstHour = jstNow.getHours();
         const jstTodayStr = jstNow.toLocaleDateString('sv-SE'); // YYYY-MM-DD in JST
         
         const datesToCheck = [jstTodayStr];
@@ -132,8 +145,8 @@ const App: React.FC = () => {
         for (const date of datesToCheck) {
           const gamesToProcess = GAMES.filter(game => {
             // 如果中奖号码缺失，或者有未处理的订单，则执行开奖
-            const hasWinningNumbers = adminConfig.winningNumbers[game.id] && adminConfig.winningNumbers[game.id][date];
-            const hasPendingPurchases = allUsers.some(u => u.purchases.some(p => p.gameId === game.id && !p.isProcessed));
+            const hasWinningNumbers = currentConfig.winningNumbers[game.id] && currentConfig.winningNumbers[game.id][date];
+            const hasPendingPurchases = currentUsers.some(u => u.purchases.some(p => p.gameId === game.id && !p.isProcessed));
             return !hasWinningNumbers || hasPendingPurchases;
           });
           
@@ -149,10 +162,10 @@ const App: React.FC = () => {
       }
     };
 
-    const interval = setInterval(runAutoDraw, 10 * 60 * 1000);
+    const interval = setInterval(runAutoDraw, 5 * 60 * 1000); // 每5分钟检查一次
     runAutoDraw();
     return () => clearInterval(interval);
-  }, [adminConfig?.winningNumbers, allUsers]); // 监听中奖号码和用户数据的变化
+  }, [isAuthReady]); // 仅在认证就绪时启动一次
 
   const handleUpdateUser = async (uid: string, data: any) => {
     await lotteryApi.updateUserBalance(uid, data.balance);
