@@ -22,18 +22,6 @@ const ShareWinView: React.FC<Props> = ({ purchase, game, onBack }) => {
     minute: '2-digit'
   });
 
-  const handleShare = () => {
-    if (navigator.share) {
-      navigator.share({
-        title: 'Lottery Win!',
-        text: `I won ¥${purchase.winAmount.toLocaleString()} in ${game?.fullName}!`,
-        url: window.location.href,
-      }).catch(console.error);
-    } else {
-      alert('Sharing is not supported on this browser. You can take a screenshot!');
-    }
-  };
-
   return (
     <div className="min-h-full bg-[#f8f9fa] flex flex-col animate-in fade-in duration-500">
       {/* Header */}
@@ -130,19 +118,11 @@ const ShareWinView: React.FC<Props> = ({ purchase, game, onBack }) => {
         </motion.div>
 
         {/* Action Buttons */}
-        <div className="w-full max-w-[360px] grid grid-cols-2 gap-4">
-          <button 
-            onClick={handleShare}
-            className="flex items-center justify-center gap-2 text-white py-4 rounded-2xl font-bold text-xs active:scale-95 transition-transform shadow-lg"
-            style={{ backgroundColor: '#E60012' }}
-          >
-            <Share2 size={16} />
-            {t('share.btn_share', { defaultValue: 'SHARE' })}
-          </button>
+        <div className="w-full max-w-[360px]">
           <button 
             onClick={() => window.print()}
-            className="flex items-center justify-center gap-2 bg-white border py-4 rounded-2xl font-bold text-xs active:scale-95 transition-transform shadow-sm"
-            style={{ color: '#E60012', borderColor: '#E60012' }}
+            className="w-full flex items-center justify-center gap-2 text-white py-4 rounded-2xl font-bold text-xs active:scale-95 transition-transform shadow-lg"
+            style={{ backgroundColor: '#E60012' }}
           >
             <Download size={16} />
             {t('share.btn_save', { defaultValue: 'SAVE' })}
@@ -154,4 +134,3 @@ const ShareWinView: React.FC<Props> = ({ purchase, game, onBack }) => {
 };
 
 export default ShareWinView;
-
