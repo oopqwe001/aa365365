@@ -43,7 +43,7 @@ const Navbar: React.FC<Props> = ({ user, view, logoUrl, onLoginView, onRegisterV
             }}
           >
             <div className="flex items-center gap-1.5">
-              <div className="bg-[#e60012] px-1 py-0.5 rounded-sm">
+              <div className="px-1 py-0.5 rounded-sm" style={{ backgroundColor: '#E60012' }}>
                  <span className="text-white text-[12px] font-black italic tracking-tighter leading-none">LOTO</span>
               </div>
             </div>
@@ -73,7 +73,7 @@ const Navbar: React.FC<Props> = ({ user, view, logoUrl, onLoginView, onRegisterV
                 <i className="fas fa-user-shield text-[12px]"></i>
               </button>
             )}
-            <span className="text-[13px] font-[900] text-[#e60012] italic">¥{user.balance.toLocaleString()}</span>
+            <span className="text-[13px] font-[900] italic" style={{ color: '#E60012' }}>¥{user.balance.toLocaleString()}</span>
             <div className="w-7 h-7 bg-gray-50 rounded-full flex items-center justify-center text-gray-300 border border-gray-100">
               <i className="fas fa-user text-[10px]"></i>
             </div>
@@ -82,13 +82,15 @@ const Navbar: React.FC<Props> = ({ user, view, logoUrl, onLoginView, onRegisterV
           <div className="flex items-center gap-1">
             <button 
               onClick={onLoginView} 
-              className="text-[10px] font-black border border-gray-200 text-gray-600 px-3 py-1.5 rounded-[4px] bg-white active:bg-gray-50 shadow-sm"
+              className="text-[10px] font-black px-3 py-1.5 rounded-[4px] text-white active:opacity-80 shadow-sm transition-all"
+              style={{ backgroundColor: '#E60012' }}
             >
               {t('common.login')}
             </button>
             <button 
               onClick={onRegisterView} 
-              className="text-[10px] font-black border border-gray-200 text-gray-600 px-3 py-1.5 rounded-[4px] bg-white active:bg-gray-50 shadow-sm"
+              className="text-[10px] font-black px-3 py-1.5 rounded-[4px] text-white active:opacity-80 shadow-sm transition-all"
+              style={{ backgroundColor: '#E60012' }}
             >
               {t('common.register')}
             </button>

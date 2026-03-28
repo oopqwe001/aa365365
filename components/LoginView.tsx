@@ -42,7 +42,8 @@ const LoginView: React.FC<Props> = ({ onBack, onSuccess, onGoToRegister }) => {
       </div>
 
       {message && (
-        <div className={`mb-6 p-4 rounded-xl text-xs font-bold ${message.type === 'success' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
+        <div className={`mb-6 p-4 rounded-xl text-xs font-bold ${message.type === 'success' ? 'bg-green-50 text-green-600' : ''}`}
+             style={message.type === 'error' ? { backgroundColor: '#E6001208', color: '#E60012', border: '1px solid #E6001222' } : {}}>
           {message.text}
         </div>
       )}
@@ -52,7 +53,8 @@ const LoginView: React.FC<Props> = ({ onBack, onSuccess, onGoToRegister }) => {
           <label className="block text-[11px] font-black text-gray-500 mb-2 uppercase tracking-wider">{t('auth.email')}</label>
           <input 
             type="email" 
-            className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-4 text-sm font-bold outline-none focus:ring-2 ring-red-100 transition-all"
+            className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-4 text-sm font-bold outline-none focus:ring-2 transition-all"
+            style={{ '--tw-ring-color': '#E6001222' } as any}
             required
             value={email}
             onChange={e => setEmail(e.target.value)}
@@ -73,7 +75,8 @@ const LoginView: React.FC<Props> = ({ onBack, onSuccess, onGoToRegister }) => {
           </div>
           <input 
             type="password" 
-            className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-4 text-sm font-bold outline-none focus:ring-2 ring-red-100 transition-all"
+            className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-4 text-sm font-bold outline-none focus:ring-2 transition-all"
+            style={{ '--tw-ring-color': '#E6001222' } as any}
             required
             value={password}
             onChange={e => setPassword(e.target.value)}
@@ -82,7 +85,8 @@ const LoginView: React.FC<Props> = ({ onBack, onSuccess, onGoToRegister }) => {
 
         <button 
           type="submit"
-          className="w-full bg-gray-800 text-white py-4 rounded-xl font-black text-sm shadow-xl shadow-gray-200 active:scale-[0.98] transition-all"
+          className="w-full text-white py-4 rounded-xl font-black text-sm shadow-xl active:scale-[0.98] transition-all"
+          style={{ backgroundColor: '#E60012', boxShadow: '0 10px 25px -5px #E6001233' }}
         >
           {t('auth.login_btn')}
         </button>
