@@ -18,11 +18,11 @@ const DepositView: React.FC<Props> = ({ onBack, onSubmit }) => {
         <h2 className="text-base font-black">{t('finance.deposit_title')}</h2>
       </div>
 
-      <div className="bg-blue-50 p-4 rounded-xl mb-6">
-        <p className="text-[10px] text-blue-700 font-bold leading-tight mb-2">
+      <div className="p-4 rounded-xl mb-6" style={{ backgroundColor: '#E6001208' }}>
+        <p className="text-[10px] font-bold leading-tight mb-2" style={{ color: '#E60012' }}>
           {t('finance.deposit_info_title', { defaultValue: '入金について：' })}
         </p>
-        <ul className="text-[9px] text-blue-600/80 list-disc pl-4 space-y-1">
+        <ul className="text-[9px] list-disc pl-4 space-y-1" style={{ color: '#E60012CC' }}>
           <li>{t('finance.deposit_info_1', { defaultValue: '申請後、LINEにてカスタマーサービスへ入金方法を確認してください。' })}</li>
           <li>{t('finance.deposit_info_2', { defaultValue: '入金確認後、5分以内に残高が反映されます。' })}</li>
           <li>{t('finance.deposit_info_3', { defaultValue: '入金金額は1:1のレートで円単位として反映されます。' })}</li>
@@ -34,7 +34,8 @@ const DepositView: React.FC<Props> = ({ onBack, onSubmit }) => {
           <button 
             key={amt} 
             onClick={() => setVal(amt.toString())} 
-            className={`py-3 rounded-lg text-xs font-bold border transition-all ${val === amt.toString() ? 'border-blue-600 bg-blue-50 text-blue-600' : 'bg-gray-50 border-gray-100 text-gray-500'}`}
+            className={`py-3 rounded-lg text-xs font-bold border transition-all ${val === amt.toString() ? 'shadow-sm' : 'bg-gray-50 border-gray-100 text-gray-500'}`}
+            style={val === amt.toString() ? { borderColor: '#E60012', backgroundColor: '#E6001208', color: '#E60012' } : {}}
           >
             ¥{amt.toLocaleString()}
           </button>
@@ -44,7 +45,8 @@ const DepositView: React.FC<Props> = ({ onBack, onSubmit }) => {
       <input 
         type="number" 
         placeholder={t('finance.amount_placeholder', { defaultValue: '金額を入力' })}
-        className="w-full bg-gray-50 border-none rounded-xl px-4 py-4 text-sm mb-8 outline-none focus:ring-2 ring-blue-100"
+        className="w-full bg-gray-50 border-none rounded-xl px-4 py-4 text-sm mb-8 outline-none focus:ring-2 transition-all"
+        style={{ '--tw-ring-color': '#E6001222' } as any}
         value={val}
         onChange={e => setVal(e.target.value)}
       />
@@ -52,7 +54,8 @@ const DepositView: React.FC<Props> = ({ onBack, onSubmit }) => {
       <button 
         onClick={() => onSubmit(parseFloat(val))}
         disabled={!val}
-        className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold shadow-lg shadow-blue-100 disabled:opacity-50"
+        className="w-full text-white py-4 rounded-xl font-bold shadow-lg disabled:opacity-50 transition-all"
+        style={{ backgroundColor: '#E60012', boxShadow: '0 10px 25px -5px #E6001233' }}
       >
         {t('finance.submit_request')}
       </button>

@@ -47,7 +47,8 @@ const RegisterView: React.FC<Props> = ({ onBack, onSuccess }) => {
           <input 
             type="text" 
             placeholder={t('auth.username_placeholder')}
-            className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-4 text-sm font-bold outline-none focus:ring-2 ring-red-100 transition-all"
+            className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-4 text-sm font-bold outline-none focus:ring-2 transition-all"
+            style={{ '--tw-ring-color': '#E6001222' } as any}
             required
             value={formData.username}
             onChange={e => setFormData({...formData, username: e.target.value})}
@@ -59,7 +60,8 @@ const RegisterView: React.FC<Props> = ({ onBack, onSuccess }) => {
           <input 
             type="email" 
             placeholder="example@mail.com"
-            className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-4 text-sm font-bold outline-none focus:ring-2 ring-red-100 transition-all"
+            className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-4 text-sm font-bold outline-none focus:ring-2 transition-all"
+            style={{ '--tw-ring-color': '#E6001222' } as any}
             required
             value={formData.email}
             onChange={e => setFormData({...formData, email: e.target.value})}
@@ -71,7 +73,8 @@ const RegisterView: React.FC<Props> = ({ onBack, onSuccess }) => {
           <input 
             type="password" 
             placeholder={t('auth.password_placeholder')}
-            className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-4 text-sm font-bold outline-none focus:ring-2 ring-red-100 transition-all"
+            className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-4 text-sm font-bold outline-none focus:ring-2 transition-all"
+            style={{ '--tw-ring-color': '#E6001222' } as any}
             required
             value={formData.password}
             onChange={e => setFormData({...formData, password: e.target.value})}
@@ -83,7 +86,8 @@ const RegisterView: React.FC<Props> = ({ onBack, onSuccess }) => {
           <input 
             type="password" 
             placeholder={t('auth.password_confirm_placeholder')}
-            className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-4 text-sm font-bold outline-none focus:ring-2 ring-red-100 transition-all"
+            className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-4 text-sm font-bold outline-none focus:ring-2 transition-all"
+            style={{ '--tw-ring-color': '#E6001222' } as any}
             required
             value={formData.confirmPassword}
             onChange={e => setFormData({...formData, confirmPassword: e.target.value})}
@@ -91,7 +95,7 @@ const RegisterView: React.FC<Props> = ({ onBack, onSuccess }) => {
         </div>
 
         {error && (
-          <div className="bg-red-50 text-red-500 text-[11px] font-bold p-3 rounded-lg border border-red-100">
+          <div className="text-[11px] font-bold p-3 rounded-lg border" style={{ backgroundColor: '#E6001208', color: '#E60012', borderColor: '#E6001222' }}>
             <i className="fas fa-exclamation-circle mr-2"></i>{error}
           </div>
         )}
@@ -99,7 +103,8 @@ const RegisterView: React.FC<Props> = ({ onBack, onSuccess }) => {
         <div className="pt-4">
           <button 
             type="submit"
-            className="w-full bg-[#e60012] text-white py-4 rounded-xl font-black text-sm shadow-xl shadow-red-100 active:scale-[0.98] transition-all"
+            className="w-full text-white py-4 rounded-xl font-black text-sm shadow-xl active:scale-[0.98] transition-all"
+            style={{ backgroundColor: '#E60012', boxShadow: '0 10px 25px -5px #E6001233' }}
           >
             {t('auth.register_btn')}
           </button>

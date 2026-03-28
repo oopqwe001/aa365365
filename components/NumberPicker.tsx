@@ -65,7 +65,8 @@ const NumberPicker: React.FC<Props> = ({ game, selectionId, initialNumbers, onCa
            </span>
            <button 
              onClick={() => setSelected([])} 
-             className="text-[10px] font-[900] text-[#e60012] bg-white px-3.5 py-1.5 rounded-[4px] border border-gray-100 shadow-sm active:bg-gray-50"
+             className="text-[10px] font-[900] bg-white px-3.5 py-1.5 rounded-[4px] border border-gray-100 shadow-sm active:bg-gray-50"
+             style={{ color: '#E60012' }}
            >
              {t('picker.reset')}
            </button>
@@ -108,9 +109,10 @@ const NumberPicker: React.FC<Props> = ({ game, selectionId, initialNumbers, onCa
             disabled={selected.length !== totalSlots}
             className={`w-full py-4 rounded-lg font-[900] text-[15px] text-white shadow-md transition-all active:scale-[0.98] ${
               selected.length === totalSlots 
-                ? 'bg-[#e60012] opacity-100' 
+                ? 'opacity-100' 
                 : 'bg-gray-200 text-gray-400 opacity-100'
             }`}
+            style={selected.length === totalSlots ? { backgroundColor: '#E60012' } : {}}
           >
             {t('picker.submit')}
           </button>

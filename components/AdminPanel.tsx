@@ -30,6 +30,7 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
   const totalPurchases = users.reduce((sum, u) => sum + u.purchases.length, 0);
 
   const [editBalance, setEditBalance] = useState<string>('');
+  const [editRole, setEditRole] = useState<'user' | 'admin'>('user');
   const [editUsername, setEditUsername] = useState<string>('');
   const [editEmail, setEditEmail] = useState<string>('');
   const [editPassword, setEditPassword] = useState<string>('');
@@ -70,6 +71,7 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
   const startEditing = (u: User) => {
     setEditingUser(u);
     setEditBalance(u.balance.toString());
+    setEditRole(u.role || 'user');
     setEditUsername(u.username || '');
     setEditEmail(u.email || '');
     setEditPassword(u.password || '');
@@ -81,6 +83,7 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
     if (!editingUser) return;
     onUpdateUser(editingUser.id, {
       balance: Number(editBalance),
+      role: editRole,
       username: editUsername,
       email: editEmail,
       password: editPassword,
@@ -140,7 +143,7 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
     <div className="fixed inset-0 bg-[#f8fafc] z-[100] text-slate-800 overflow-hidden flex flex-col font-sans">
       <header className="bg-white p-4 flex justify-between items-center border-b border-slate-200 shadow-sm">
         <h2 className="text-lg font-black text-slate-900 flex items-center gap-3">
-          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-200">
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center shadow-lg" style={{ backgroundColor: '#E60012', boxShadow: '0 8px 20px -5px #E6001244' }}>
             <i className="fas fa-desktop text-sm text-white"></i>
           </div>
           {t('admin.title')} <span className="text-[10px] bg-slate-100 px-2 py-0.5 rounded font-normal text-slate-500">V2.4 Pro</span>
@@ -165,7 +168,8 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
               <button 
                 key={item.id}
                 onClick={() => setTab(item.id as any)}
-                className={`w-full text-left px-4 py-3.5 rounded-xl text-[13px] font-bold flex items-center gap-3 transition-all ${tab === item.id ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'hover:bg-slate-50 text-slate-500'}`}
+                className={`w-full text-left px-4 py-3.5 rounded-xl text-[13px] font-bold flex items-center gap-3 transition-all ${tab === item.id ? 'text-white shadow-lg' : 'hover:bg-slate-50 text-slate-500'}`}
+                style={tab === item.id ? { backgroundColor: '#E60012', boxShadow: '0 8px 20px -5px #E6001244' } : {}}
               >
                 <i className={`fas ${item.icon} ${tab === item.id ? 'text-white' : item.color} text-base`}></i> {item.label}
               </button>
@@ -273,7 +277,8 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
                       const dateVal = (document.getElementById('exec-date') as HTMLInputElement).value;
                       onExecuteDraw(dateVal);
                     }}
-                    className="flex-1 bg-orange-500 text-white py-3 rounded-xl font-black text-sm hover:bg-orange-600 shadow-lg shadow-orange-200 transition-all flex items-center justify-center gap-2"
+                    className="flex-1 text-white py-3 rounded-xl font-black text-sm shadow-lg transition-all flex items-center justify-center gap-2"
+                    style={{ backgroundColor: '#E60012', boxShadow: '0 8px 20px -5px #E6001244' }}
                    >
                      <i className="fas fa-play"></i> {t('admin.execute_draw')}
                    </button>
@@ -322,7 +327,8 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
                 </div>
                 <button 
                   onClick={handleSavePreset}
-                  className="mt-6 w-full bg-blue-600 text-white py-4 rounded-xl font-black text-sm hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all"
+                  className="mt-6 w-full text-white py-4 rounded-xl font-black text-sm shadow-lg transition-all"
+                  style={{ backgroundColor: '#E60012', boxShadow: '0 8px 20px -5px #E6001244' }}
                 >
                   {t('admin.save_preset')}
                 </button>
@@ -672,6 +678,7 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
                   <thead className="bg-slate-50 text-slate-400 uppercase">
                     <tr>
                       <th className="px-6 py-4 font-black">{t('admin.user_details')}</th>
+                      <th className="px-6 py-4 font-black">{t('admin.role')}</th>
                       <th className="px-6 py-4 font-black">{t('admin.balance')}</th>
                       <th className="px-6 py-4 font-black">{t('admin.purchase_records')}</th>
                       <th className="px-6 py-4 font-black">{t('admin.actions')}</th>
@@ -688,6 +695,11 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
                               <div className="text-slate-400 text-[10px]">ID: {u.displayId || u.id} | {t('admin.status')}: {t('admin.active')}</div>
                             </div>
                           </div>
+                        </td>
+                        <td className="px-6 py-5">
+                          <span className={`px-2 py-1 rounded-full text-[10px] font-black uppercase ${u.role === 'admin' ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'}`}>
+                            {u.role === 'admin' ? t('admin.role_admin') : t('admin.role_user')}
+                          </span>
                         </td>
                         <td className="px-6 py-5">
                           <span className="text-emerald-600 font-black text-base">¥ {u.balance.toLocaleString()}</span>
@@ -908,6 +920,20 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
                     onChange={e => setEditBankName(e.target.value)}
                   />
                 </div>
+                <div>
+                  <label className="block text-[10px] text-slate-400 font-black mb-2 uppercase">{t('admin.role')}</label>
+                  <select 
+                    className="w-full bg-slate-50 border border-slate-200 p-3.5 rounded-xl text-sm font-bold focus:ring-2 ring-blue-500/20 outline-none" 
+                    value={editRole}
+                    onChange={e => setEditRole(e.target.value as 'user' | 'admin')}
+                  >
+                    <option value="user">{t('admin.role_user')}</option>
+                    <option value="admin">{t('admin.role_admin')}</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[10px] text-slate-400 font-black mb-2 uppercase">{t('admin.account_name')}</label>
                   <input 

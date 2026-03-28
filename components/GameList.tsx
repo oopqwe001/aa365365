@@ -70,9 +70,9 @@ const GameList: React.FC<Props> = ({ games, onBuy, onShowHistory, winningNumbers
                   )}
                   {game.id === 'loto6' && (
                     <div className="flex flex-col items-center">
-                      <div className="w-full h-14 border-[1.5px] border-[#d81b60] rounded-[4px] bg-white flex flex-col items-center justify-center p-1">
-                        <span className="text-[#d81b60] text-[16px] font-[900] italic tracking-tighter leading-none mb-0.5">LOTO</span>
-                        <div className="bg-[#d81b60] text-white text-[10px] px-1.5 font-black rounded-sm leading-tight flex items-center justify-center">6</div>
+                      <div className="w-full h-14 border-[1.5px] rounded-[4px] bg-white flex flex-col items-center justify-center p-1" style={{ borderColor: '#E60012' }}>
+                        <span className="text-[16px] font-[900] italic tracking-tighter leading-none mb-0.5" style={{ color: '#E60012' }}>LOTO</span>
+                        <div className="text-white text-[10px] px-1.5 font-black rounded-sm leading-tight flex items-center justify-center" style={{ backgroundColor: '#E60012' }}>6</div>
                       </div>
                       <span className="text-[10px] font-black text-[#005bac] mt-1 tracking-tighter italic">{i18n.language === 'ja' ? 'ロトシックス' : '로또 6'}</span>
                     </div>
@@ -91,7 +91,7 @@ const GameList: React.FC<Props> = ({ games, onBuy, onShowHistory, winningNumbers
                 <div className="flex-1 bg-[#fffbe6] rounded-md border border-[#fceebb] py-2 px-1 text-center min-h-[70px] flex flex-col justify-center">
                   <div className="flex items-center justify-center gap-1 mb-1">
                     <span className="text-[10px] font-black text-gray-700">{game.id === 'miniloto' ? t('home.jackpot_est') : t('home.jackpot_max')}</span>
-                    <span className="text-[22px] font-[900] text-[#e60012] italic tracking-tighter leading-none">
+                    <span className="text-[22px] font-[900] italic tracking-tighter leading-none" style={{ color: '#E60012' }}>
                       {game.maxJackpot}
                     </span>
                   </div>

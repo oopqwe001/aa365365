@@ -68,8 +68,9 @@ const PurchaseHistory: React.FC<Props> = ({ purchases, games, onBack, onShare })
                           <div 
                             key={i} 
                             className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-black border ${
-                              p.status === 'won' ? 'bg-red-50 border-red-200 text-red-600' : 'bg-gray-50 border-gray-100 text-gray-600'
+                              p.status === 'won' ? 'border-red-200' : 'bg-gray-50 border-gray-100 text-gray-600'
                             }`}
+                            style={p.status === 'won' ? { backgroundColor: '#E6001211', color: '#E60012' } : {}}
                           >
                             {n}
                           </div>
@@ -83,10 +84,11 @@ const PurchaseHistory: React.FC<Props> = ({ purchases, games, onBack, onShare })
                   <div className="flex items-center gap-2">
                     <span className="text-[10px] font-bold text-gray-400">{t('history.status_label')}:</span>
                     <span className={`text-[11px] font-black px-2 py-0.5 rounded-full ${
-                      p.status === 'won' ? 'bg-red-100 text-red-600' : 
                       p.status === 'lost' ? 'bg-gray-200 text-gray-500' : 
-                      'bg-blue-100 text-blue-600'
-                    }`}>
+                      p.status === 'pending' ? 'bg-blue-100 text-blue-600' : ''
+                    }`}
+                    style={p.status === 'won' ? { backgroundColor: '#E6001222', color: '#E60012' } : {}}
+                    >
                       {p.status === 'won' ? t('history.status_won') : p.status === 'lost' ? t('history.status_lost') : t('history.status_pending')}
                     </span>
                   </div>
@@ -94,16 +96,17 @@ const PurchaseHistory: React.FC<Props> = ({ purchases, games, onBack, onShare })
                     <div className="flex items-center gap-3">
                       <button 
                         onClick={() => onShare(p)}
-                        className="w-8 h-8 rounded-full bg-red-50 flex items-center justify-center text-red-500 active:scale-90 transition-transform"
+                        className="w-8 h-8 rounded-full flex items-center justify-center active:scale-90 transition-transform"
+                        style={{ backgroundColor: '#E6001211', color: '#E60012' }}
                       >
                         <i className="fas fa-share-alt text-xs"></i>
                       </button>
                       <div className="text-right">
                         <div className="flex flex-col">
-                          <span className="text-[10px] font-bold text-red-400 block leading-none">
+                          <span className="text-[10px] font-bold block leading-none" style={{ color: '#E6001288' }}>
                             {p.rank ? p.rank.split(', ').map(r => t(`history.${r}`)).join(', ') : t('history.win_amount_label')}
                           </span>
-                          <span className="text-sm font-black text-red-600">¥{p.winAmount.toLocaleString()}</span>
+                          <span className="text-sm font-black" style={{ color: '#E60012' }}>¥{p.winAmount.toLocaleString()}</span>
                         </div>
                       </div>
                     </div>

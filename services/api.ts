@@ -240,15 +240,31 @@ export const lotteryApi = {
       if (!txDoc.exists()) return;
       
       const tx = txDoc.data() as Transaction;
+      
+      // If already processed, don't process again to avoid double balance updates
+      if (tx.status !== 'pending') return;
+
       await updateDoc(txRef, { status });
 
       if (status === 'approved') {
-        const userRef = doc(db, 'users', tx.userId);
-        const userDoc = await getDoc(userRef);
-        if (userDoc.exists()) {
-          const user = userDoc.data() as User;
-          const newBalance = tx.type === 'deposit' ? user.balance + tx.amount : user.balance - tx.amount;
-          await updateDoc(userRef, { balance: newBalance });
+        if (tx.type === 'deposit') {
+          const userRef = doc(db, 'users', tx.userId);
+          const userDoc = await getDoc(userRef);
+          if (userDoc.exists()) {
+            const user = userDoc.data() as User;
+            await updateDoc(userRef, { balance: user.balance + tx.amount });
+          }
+        }
+        // Withdrawal balance was already deducted on submission in App.tsx
+      } else if (status === 'rejected') {
+        if (tx.type === 'withdraw') {
+          // Refund balance for rejected withdrawal
+          const userRef = doc(db, 'users', tx.userId);
+          const userDoc = await getDoc(userRef);
+          if (userDoc.exists()) {
+            const user = userDoc.data() as User;
+            await updateDoc(userRef, { balance: user.balance + tx.amount });
+          }
         }
       }
     } catch (error) {
@@ -356,6 +372,14 @@ export const lotteryApi = {
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `users/${userId}`);
       return { success: false, message: "購入に失敗しました" };
+    }
+  },
+
+  async updateUser(userId: string, data: Partial<User>) {
+    try {
+      await updateDoc(doc(db, 'users', userId), data);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `users/${userId}`);
     }
   },
 

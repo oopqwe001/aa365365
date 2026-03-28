@@ -21,7 +21,7 @@ const SummaryView: React.FC<Props> = ({ game, selections, onBack, onSelect, onQu
   return (
     <div className="flex flex-col h-full bg-white">
       <div className="flex border-b h-10">
-        <button className="flex-1 text-[11px] font-bold border-b-2 border-red-600 text-red-600 bg-white">{t('summary.normal_purchase')}</button>
+        <button className="flex-1 text-[11px] font-bold border-b-2 bg-white" style={{ color: '#E60012', borderColor: '#E60012' }}>{t('summary.normal_purchase')}</button>
         <button className="flex-1 text-[11px] font-bold text-gray-400 bg-gray-50">{t('summary.subscription')}</button>
       </div>
 
@@ -57,7 +57,7 @@ const SummaryView: React.FC<Props> = ({ game, selections, onBack, onSelect, onQu
                     </>
                   ) : (
                     <div className="flex gap-2">
-                      <button onClick={() => onSelect(sel.id)} className="flex-1 bg-red-600 text-white text-[10px] font-bold py-2 rounded shadow-sm">{t('summary.select_self')}</button>
+                      <button onClick={() => onSelect(sel.id)} className="flex-1 text-white text-[10px] font-bold py-2 rounded shadow-sm" style={{ backgroundColor: '#E60012' }}>{t('summary.select_self')}</button>
                       <button onClick={() => onQuickPick(sel.id)} className="flex-1 bg-[#f57c00] text-white text-[10px] font-bold py-2 rounded shadow-sm">{t('summary.quick_pick')}</button>
                     </div>
                   )}
@@ -77,12 +77,13 @@ const SummaryView: React.FC<Props> = ({ game, selections, onBack, onSelect, onQu
       <div className="p-3 bg-gray-50 border-t">
         <div className="flex justify-between items-center mb-3 px-1">
           <span className="text-[11px] font-bold text-gray-600">{t('summary.total_amount')}</span>
-          <span className="text-lg font-black text-red-600 tracking-tight">¥ {totalCost.toLocaleString()}</span>
+          <span className="text-lg font-black tracking-tight" style={{ color: '#E60012' }}>¥ {totalCost.toLocaleString()}</span>
         </div>
         <button 
           onClick={onFinalize}
           disabled={validCount === 0}
-          className="w-full bg-red-600 text-white py-3.5 rounded-lg font-black text-sm shadow-md disabled:opacity-30 active:scale-[0.98] transition-all"
+          className="w-full text-white py-3.5 rounded-lg font-black text-sm shadow-md disabled:opacity-30 active:scale-[0.98] transition-all"
+          style={{ backgroundColor: '#E60012' }}
         >
           {t('summary.finalize')}
         </button>

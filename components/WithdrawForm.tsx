@@ -42,7 +42,8 @@ const WithdrawForm: React.FC<Props> = ({ onBack, onSubmit }) => {
           <input 
             type="number" 
             placeholder={t('finance.amount_placeholder', { defaultValue: '金額を入力' })}
-            className="w-full border-b-2 border-gray-100 py-3 outline-none focus:border-red-600 text-xl font-black"
+            className="w-full border-b-2 border-gray-100 py-3 outline-none text-xl font-black transition-all"
+            style={{ borderBottomColor: formData.amount ? '#E60012' : '#F3F4F6' }}
             required
             value={formData.amount}
             onChange={e => setFormData({...formData, amount: e.target.value})}
@@ -74,7 +75,7 @@ const WithdrawForm: React.FC<Props> = ({ onBack, onSubmit }) => {
           </div>
         </div>
 
-        <button type="submit" className="w-full bg-red-600 text-white py-4 rounded-xl font-bold shadow-lg shadow-red-100">
+        <button type="submit" className="w-full text-white py-4 rounded-xl font-bold shadow-lg" style={{ backgroundColor: '#E60012', boxShadow: '0 10px 25px -5px #E6001233' }}>
           {t('finance.submit_request')}
         </button>
       </form>

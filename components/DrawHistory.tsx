@@ -54,7 +54,7 @@ const DrawHistory: React.FC<Props> = ({ games, history, onBack }) => {
                     <span className="text-[11px] text-gray-500 font-bold bg-gray-50 px-2 py-1 rounded">
                       {latestDraw[0]} ({t('history.round', { round: 622 })})
                     </span>
-                    <p className="text-[11px] font-black text-red-600">{t('home.jackpot_est')}{game.maxJackpot}</p>
+                    <p className="text-[11px] font-black" style={{ color: '#E60012' }}>{t('home.jackpot_est')}{game.maxJackpot}</p>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {(latestDraw[1] as number[]).map((n: number, i: number) => (

@@ -23,8 +23,8 @@ import LoginView from '@/components/LoginView';
 import ShareWinView from '@/components/ShareWinView';
 
 const GAMES_DATA: Omit<LotteryGame, 'fullName' | 'drawDayText' | 'maxJackpot'>[] = [
-  { id: 'loto7', name: 'LOTO 7', drawDayIcon: '全', price: 300, maxNumber: 37, pickCount: 7, color: '#e60012', colorSecondary: '#005bac' },
-  { id: 'loto6', name: 'LOTO 6', drawDayIcon: '全', price: 200, maxNumber: 43, pickCount: 6, color: '#d81b60', colorSecondary: '#f08300' },
+  { id: 'loto7', name: 'LOTO 7', drawDayIcon: '全', price: 300, maxNumber: 37, pickCount: 7, color: '#E60012', colorSecondary: '#005bac' },
+  { id: 'loto6', name: 'LOTO 6', drawDayIcon: '全', price: 200, maxNumber: 43, pickCount: 6, color: '#E60012', colorSecondary: '#f08300' },
   { id: 'miniloto', name: 'MINI LOTO', drawDayIcon: '全', price: 200, maxNumber: 31, pickCount: 5, color: '#009b4f', colorSecondary: '#f08300' }
 ];
 
@@ -168,7 +168,7 @@ const App: React.FC = () => {
   }, [isAuthReady]); // 仅在认证就绪时启动一次
 
   const handleUpdateUser = async (uid: string, data: any) => {
-    await lotteryApi.updateUserBalance(uid, data.balance);
+    await lotteryApi.updateUser(uid, data);
     showToast(t('admin.user_updated', { defaultValue: 'ユーザー情報を更新しました' }));
   };
 
@@ -254,6 +254,7 @@ const App: React.FC = () => {
       }
     };
     await lotteryApi.createTransaction(newTx);
+    await lotteryApi.updateUserBalance(activeUser.id, activeUser.balance - data.amount);
     showToast(t('finance.withdraw_submitted', { defaultValue: '出金申請を受け付けました。審査をお待ちください。' }));
     setView('mypage');
   };
@@ -335,7 +336,8 @@ const App: React.FC = () => {
         
         {toast && (
           <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[200] w-[90%] max-w-[350px] animate-in slide-in-from-top-4">
-             <div className={`px-4 py-3 rounded-xl shadow-xl border flex items-center gap-3 ${toast.type === 'success' ? 'bg-green-600 border-green-500 text-white' : 'bg-red-600 border-red-500 text-white'}`}>
+             <div className={`px-4 py-3 rounded-xl shadow-xl border flex items-center gap-3 ${toast.type === 'success' ? 'bg-green-600 border-green-500 text-white' : 'border-red-500 text-white'}`}
+                  style={toast.type === 'error' ? { backgroundColor: '#E60012' } : {}}>
                 <i className={`fas ${toast.type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}`}></i>
                 <span className="text-xs font-black">{toast.message}</span>
              </div>
@@ -384,7 +386,7 @@ const App: React.FC = () => {
               <i className="fas fa-lock text-4xl text-gray-300 mb-4"></i>
               <h3 className="text-lg font-black text-gray-800">{t('admin.no_access', { defaultValue: 'アクセス権限がありません' })}</h3>
               <p className="text-xs text-gray-500 mt-2">{t('admin.no_access_desc', { defaultValue: '管理者アカウントでログインしてください。' })}</p>
-              <button onClick={() => setView('login')} className="mt-6 bg-[#e60012] text-white px-8 py-2 rounded-full font-black text-xs">{t('auth.login_title')}</button>
+              <button onClick={() => setView('login')} className="mt-6 text-white px-8 py-2 rounded-full font-black text-xs" style={{ backgroundColor: '#E60012' }}>{t('auth.login_title')}</button>
               <button onClick={() => setView('home')} className="mt-4 text-gray-400 text-[10px] font-bold">{t('common.back_home')}</button>
             </div>
           )}
@@ -417,7 +419,7 @@ const App: React.FC = () => {
 
         {loading && (
           <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] z-[150] flex flex-col items-center justify-center">
-            <div className="w-10 h-10 border-4 border-[#e60012] border-t-transparent rounded-full animate-spin mb-4"></div>
+            <div className="w-10 h-10 border-4 border-t-transparent rounded-full animate-spin mb-4" style={{ borderColor: '#E60012', borderTopColor: 'transparent' }}></div>
             <span className="text-xs font-black text-gray-500 animate-pulse tracking-widest uppercase">Processing...</span>
           </div>
         )}

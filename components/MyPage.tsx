@@ -41,7 +41,8 @@ const MyPage: React.FC<Props> = ({ user, onAction, onLogout }) => {
             <div className="flex gap-3">
               <button 
                 onClick={() => onAction('deposit')}
-                className="flex-[1.2] bg-[#e60012] text-white py-3.5 rounded-xl font-black text-[14px] shadow-lg shadow-red-100 active:scale-95 transition-all"
+                className="flex-[1.2] text-white py-3.5 rounded-xl font-black text-[14px] shadow-lg active:scale-95 transition-all"
+                style={{ backgroundColor: '#E60012', boxShadow: '0 10px 25px -5px #E6001233' }}
               >
                 {t('common.deposit')}
               </button>
@@ -73,7 +74,7 @@ const MyPage: React.FC<Props> = ({ user, onAction, onLogout }) => {
             >
               <div className="flex items-center gap-4">
                 <div className="w-6 flex justify-center">
-                  <i className={`fas ${item.icon} text-gray-400 group-hover:text-[#e60012] transition-colors`}></i>
+                  <i className={`fas ${item.icon} text-gray-400 group-hover:text-[#E60012] transition-colors`}></i>
                 </div>
                 <span className="text-[15px] font-bold text-[#444]">{item.label}</span>
               </div>

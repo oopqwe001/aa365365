@@ -31,7 +31,7 @@ const TransactionHistory: React.FC<Props> = ({ userId, transactions, onBack }) =
     switch (status) {
       case 'pending': return <span className="text-orange-500 bg-orange-50 px-2 py-0.5 rounded text-[9px] font-black border border-orange-100">{t('finance.status_pending')}</span>;
       case 'approved': return <span className="text-green-600 bg-green-50 px-2 py-0.5 rounded text-[9px] font-black border border-green-100">{t('finance.status_approved')}</span>;
-      case 'rejected': return <span className="text-red-500 bg-red-50 px-2 py-0.5 rounded text-[9px] font-black border border-red-100">{t('finance.status_rejected')}</span>;
+      case 'rejected': return <span className="px-2 py-0.5 rounded text-[9px] font-black border border-red-100" style={{ color: '#E60012', backgroundColor: '#E6001211' }}>{t('finance.status_rejected')}</span>;
       default: return null;
     }
   };
@@ -61,7 +61,9 @@ const TransactionHistory: React.FC<Props> = ({ userId, transactions, onBack }) =
                 onClick={() => tx.type === 'withdraw' && setExpandedId(expandedId === tx.id ? null : tx.id)}
               >
                 <div className="flex items-center gap-4">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${tx.type === 'deposit' ? 'bg-green-50 text-green-500' : 'bg-red-50 text-red-500'}`}>
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${tx.type === 'deposit' ? 'bg-green-50 text-green-500' : ''}`}
+                    style={tx.type === 'withdraw' ? { backgroundColor: '#E6001211', color: '#E60012' } : {}}
+                  >
                     <i className={`fas ${tx.type === 'deposit' ? 'fa-arrow-trend-up' : 'fa-arrow-trend-down'} text-sm`}></i>
                   </div>
                   <div>
@@ -73,7 +75,9 @@ const TransactionHistory: React.FC<Props> = ({ userId, transactions, onBack }) =
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className={`text-sm font-black tracking-tighter ${tx.type === 'deposit' ? 'text-green-600' : 'text-red-600'}`}>
+                  <div className={`text-sm font-black tracking-tighter ${tx.type === 'deposit' ? 'text-green-600' : ''}`}
+                    style={tx.type === 'withdraw' ? { color: '#E60012' } : {}}
+                  >
                     {tx.type === 'deposit' ? '+' : '-'} ¥{tx.amount.toLocaleString()}
                   </div>
                   {tx.type === 'withdraw' && (
