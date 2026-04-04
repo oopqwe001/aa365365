@@ -31,6 +31,7 @@ export interface Purchase {
   status: 'pending' | 'won' | 'lost';
   winAmount: number;
   rank?: string; // e.g. "1等", "2等", "3等"
+  drawDate?: string; // YYYY-MM-DD
 }
 
 export interface Transaction {

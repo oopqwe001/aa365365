@@ -35,9 +35,11 @@ const PurchaseHistory: React.FC<Props> = ({ purchases, games, onBack, onShare })
           sortedPurchases.map((p) => {
             const game = getGame(p.gameId);
             const pDate = new Date(p.timestamp);
-            const drawDate = new Date(pDate.toLocaleString("en-US", {timeZone: "Asia/Tokyo"}));
-            drawDate.setDate(drawDate.getDate() + 1);
-            const drawDateStr = drawDate.toLocaleDateString('sv-SE');
+            const drawDateStr = p.drawDate || (() => {
+              const drawDate = new Date(pDate.toLocaleString("en-US", {timeZone: "Asia/Tokyo"}));
+              drawDate.setDate(drawDate.getDate() + 1);
+              return drawDate.toLocaleDateString('sv-SE');
+            })();
 
             const date = pDate.toLocaleString(i18n.language === 'ko' ? 'ko-KR' : 'ja-JP', {
               month: '2-digit',

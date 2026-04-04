@@ -464,6 +464,7 @@ export const lotteryApi = {
               }
               
               p.isProcessed = true;
+              p.drawDate = date;
               userChanged = true;
             }
           }

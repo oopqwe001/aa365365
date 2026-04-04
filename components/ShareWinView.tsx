@@ -14,13 +14,19 @@ interface Props {
 const ShareWinView: React.FC<Props> = ({ purchase, game, onBack }) => {
   const { t, i18n } = useTranslation();
 
-  const date = new Date(purchase.timestamp).toLocaleString('ja-JP', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
+  const date = purchase.drawDate 
+    ? new Date(purchase.drawDate).toLocaleDateString('ja-JP', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      })
+    : new Date(purchase.timestamp).toLocaleString('ja-JP', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
 
   return (
     <div className="min-h-full bg-[#f8f9fa] flex flex-col animate-in fade-in duration-500">
