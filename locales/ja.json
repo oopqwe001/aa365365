@@ -174,7 +174,7 @@
     "welcome_back": "おかえりなさい！",
     "email_required": "メールアドレスを入力してください。",
     "register_subtitle": "メールアドレスで簡単に登録できます。",
-    "username_placeholder": "山田 太郎",
+    "username_placeholder": "",
     "password_placeholder": "6文字以上の英数字",
     "password_confirm": "パスワード（確認）",
     "password_confirm_placeholder": "もう一度入力してください",
@@ -258,3 +258,4 @@
     "disclaimer": "これはあなたの当選記録のデジタル証明書です。アカウントの安全を確保してください。"
   }
 }
+
