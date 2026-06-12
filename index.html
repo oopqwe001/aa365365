@@ -1,14 +1,32 @@
-
 <!DOCTYPE html>
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>宝くじ公式サイト | LOTOネット</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>宝くじネット</title>
+    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <!-- Tailwind via CDN for stability -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              'official-red': '#e60012',
+            },
+            fontFamily: {
+              sans: ['Noto Sans JP', 'sans-serif'],
+            }
+          }
+        }
+      }
+    </script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap');
         :root { --official-red: #e60012; --bg-gray: #f2f2f2; }
         body { 
             font-family: 'Noto Sans JP', sans-serif; 
@@ -19,16 +37,12 @@
             -webkit-tap-highlight-color: transparent;
             user-select: none;
         }
-        .view-transition { animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .official-dotted-line { background-image: linear-gradient(to right, #ccc 50%, rgba(255,255,255,0) 0%); background-position: bottom; background-size: 6px 1px; background-repeat: repeat-x; height: 1px; width: 100%; }
+        /* Hide scrollbar but keep functionality */
         ::-webkit-scrollbar { width: 0px; background: transparent; }
-        .btn-official { transition: all 0.2s; }
-        .btn-official:active { transform: scale(0.96); opacity: 0.9; }
     </style>
 </head>
 <body>
     <div id="root"></div>
-    <script type="module" src="./index.tsx"></script>
+    <script type="module" src="/index.tsx"></script>
 </body>
 </html>

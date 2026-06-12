@@ -39,6 +39,7 @@ const App: React.FC = () => {
   const [adminConfig, setAdminConfig] = useState<AdminConfig | null>(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [selectedPurchase, setSelectedPurchase] = useState<Purchase | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const adminConfigRef = React.useRef<AdminConfig | null>(null);
   const allUsersRef = React.useRef<User[]>([]);
@@ -88,14 +89,22 @@ const App: React.FC = () => {
       if (doc.exists()) {
         setAdminConfig(doc.data() as AdminConfig);
       } else {
-        lotteryApi.getConfig().then(setAdminConfig);
+        lotteryApi.getConfig().then(setAdminConfig).catch(err => {
+          console.error("Config fetch error:", err);
+          setError(t('common.error_connection'));
+        });
       }
+    }, (err) => {
+      console.error("Config snapshot error:", err);
+      setError(t('common.error_connection'));
     });
 
     // Transactions Listener
     const unsubTxs = onSnapshot(collection(db, 'transactions'), (snapshot) => {
       const txs = snapshot.docs.map(d => d.data() as Transaction);
       setTransactions(txs.sort((a, b) => b.timestamp - a.timestamp));
+    }, (err) => {
+      console.error("Transactions snapshot error:", err);
     });
 
     // Users Listener
@@ -108,6 +117,8 @@ const App: React.FC = () => {
         const current = users.find(u => u.id === activeUser.id);
         if (current) setActiveUser({ ...current, isLoggedIn: true });
       }
+    }, (err) => {
+      console.error("Users snapshot error:", err);
     });
 
     return () => {
@@ -328,7 +339,32 @@ const App: React.FC = () => {
     return filtered;
   }, [adminConfig?.winningNumbers]);
 
-  if (!activeUser || !adminConfig) return null;
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 p-6 text-center">
+        <i className="fas fa-exclamation-triangle text-4xl text-red-500 mb-4"></i>
+        <h2 className="text-lg font-black text-gray-800 mb-2">{t('common.error_connection')}</h2>
+        <p className="text-sm text-gray-500 mb-6">
+          {t('common.error_connection_desc', { defaultValue: 'サーバーとの通信に失败しました。インターネット接続やFirebaseの设定を确认してください。' })}
+        </p>
+        <button 
+          onClick={() => window.location.reload()} 
+          className="px-6 py-2 bg-[#e60012] text-white rounded-full font-black text-sm"
+        >
+          {t('common.retry', { defaultValue: '再试行' })}
+        </button>
+      </div>
+    );
+  }
+
+  if (!isAuthReady || !adminConfig || !activeUser) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-white">
+        <div className="w-10 h-10 border-4 border-t-transparent rounded-full animate-spin mb-4" style={{ borderColor: '#E60012', borderTopColor: 'transparent' }}></div>
+        <span className="text-xs font-black text-gray-400 tracking-widest uppercase">Loading App...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="flex justify-center bg-[#f2f2f2] min-h-screen font-sans">
