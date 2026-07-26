@@ -44,6 +44,7 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
   const [presetGameId, setPresetGameId] = useState<string>(games[0]?.id || 'loto7');
   const [presetDate, setPresetDate] = useState<string>(new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Tokyo"})).toLocaleDateString('sv-SE'));
   const [presetNums, setPresetNums] = useState<string>('');
+  const [presetFilter, setPresetFilter] = useState<'all' | 'upcoming' | 'past'>('all');
 
   const handleSavePreset = () => {
     const nums = presetNums.split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n));
@@ -64,6 +65,28 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
       if (Object.keys(newWinningNumbers[gameId]).length === 0) {
         delete newWinningNumbers[gameId];
       }
+      setConfig({ ...config, winningNumbers: newWinningNumbers });
+    }
+  };
+
+  const handleClearPastPresets = () => {
+    const jstToday = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Tokyo"})).toLocaleDateString('sv-SE');
+    const newWinningNumbers = { ...config.winningNumbers };
+    let hasDeleted = false;
+
+    Object.keys(newWinningNumbers).forEach(gameId => {
+      Object.keys(newWinningNumbers[gameId]).forEach(date => {
+        if (date < jstToday) {
+          delete newWinningNumbers[gameId][date];
+          hasDeleted = true;
+        }
+      });
+      if (Object.keys(newWinningNumbers[gameId]).length === 0) {
+        delete newWinningNumbers[gameId];
+      }
+    });
+
+    if (hasDeleted) {
       setConfig({ ...config, winningNumbers: newWinningNumbers });
     }
   };
@@ -336,22 +359,68 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
 
               {/* 预设号码记录列表 */}
               <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
-                <h3 className="text-slate-900 font-black text-base flex items-center gap-2 mb-6">
-                  <i className="fas fa-calendar-check text-blue-500"></i> {t('admin.active_presets', { defaultValue: '设置好的开奖号码列表' })}
-                </h3>
+                <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+                  <h3 className="text-slate-900 font-black text-base flex items-center gap-2">
+                    <i className="fas fa-calendar-check text-blue-500"></i> {t('admin.active_presets', { defaultValue: '设置好的开奖号码列表' })}
+                  </h3>
+                  
+                  <div className="flex items-center gap-2">
+                    {/* 筛选切换 */}
+                    <div className="flex bg-slate-100 p-1 rounded-lg text-xs font-bold text-slate-600">
+                      <button 
+                        onClick={() => setPresetFilter('all')}
+                        className={`px-3 py-1 rounded-md transition-all ${presetFilter === 'all' ? 'bg-white text-slate-900 shadow-sm' : 'hover:text-slate-900'}`}
+                      >
+                        全部
+                      </button>
+                      <button 
+                        onClick={() => setPresetFilter('upcoming')}
+                        className={`px-3 py-1 rounded-md transition-all ${presetFilter === 'upcoming' ? 'bg-white text-blue-600 shadow-sm' : 'hover:text-slate-900'}`}
+                      >
+                        今日/未来
+                      </button>
+                      <button 
+                        onClick={() => setPresetFilter('past')}
+                        className={`px-3 py-1 rounded-md transition-all ${presetFilter === 'past' ? 'bg-white text-rose-600 shadow-sm' : 'hover:text-slate-900'}`}
+                      >
+                        历史旧记录
+                      </button>
+                    </div>
+
+                    {/* 一键清空旧记录按钮 */}
+                    <button 
+                      onClick={handleClearPastPresets}
+                      className="px-3 py-1.5 bg-rose-50 border border-rose-200 hover:bg-rose-100 text-rose-600 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all"
+                      title="删除今日之前的历史开奖记录"
+                    >
+                      <i className="fas fa-trash-alt text-[10px]"></i>
+                      一键清空旧记录
+                    </button>
+                  </div>
+                </div>
+
                 <div className="space-y-3">
                   {Object.entries(config.winningNumbers || {}).flatMap(([gameId, dates]) => 
                     Object.entries(dates).map(([date, nums]) => ({ gameId, date, nums }))
-                  ).sort((a, b) => b.date.localeCompare(a.date)).map((preset, idx) => {
+                  ).filter(preset => {
+                    const jstToday = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Tokyo"})).toLocaleDateString('sv-SE');
+                    if (presetFilter === 'upcoming') return preset.date >= jstToday;
+                    if (presetFilter === 'past') return preset.date < jstToday;
+                    return true;
+                  }).sort((a, b) => b.date.localeCompare(a.date)).map((preset, idx) => {
                     const game = games.find(g => g.id === preset.gameId);
+                    const jstToday = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Tokyo"})).toLocaleDateString('sv-SE');
+                    const isPast = preset.date < jstToday;
                     return (
-                      <div key={idx} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100 hover:border-blue-200 transition-all">
+                      <div key={idx} className={`flex items-center justify-between p-4 rounded-xl border transition-all ${isPast ? 'bg-slate-50/70 border-slate-100 opacity-80' : 'bg-white border-blue-100 shadow-sm'}`}>
                         <div className="flex items-center gap-4">
                           <div className="w-2 h-8 rounded-full" style={{ backgroundColor: game?.color || '#ccc' }}></div>
                           <div>
                             <div className="flex items-center gap-2 mb-1">
                               <span className="text-xs font-black text-slate-900">{game?.name || preset.gameId}</span>
-                              <span className="text-[10px] text-slate-500 font-bold bg-slate-200 px-2 py-0.5 rounded-full">{preset.date}</span>
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isPast ? 'bg-slate-200 text-slate-500' : 'bg-blue-100 text-blue-700'}`}>
+                                {preset.date} {isPast ? '(已开奖)' : '(未开/今日)'}
+                              </span>
                             </div>
                             <div className="flex gap-1">
                               {preset.nums.map((n, i) => (
@@ -374,7 +443,12 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
                   })}
                   {(!config.winningNumbers || Object.entries(config.winningNumbers).flatMap(([gameId, dates]) => 
                     Object.entries(dates).map(([date, nums]) => ({ gameId, date, nums }))
-                  ).length === 0) && (
+                  ).filter(preset => {
+                    const jstToday = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Tokyo"})).toLocaleDateString('sv-SE');
+                    if (presetFilter === 'upcoming') return preset.date >= jstToday;
+                    if (presetFilter === 'past') return preset.date < jstToday;
+                    return true;
+                  }).length === 0) && (
                     <div className="py-10 text-center text-slate-300 italic text-xs">
                       {t('admin.no_presets')}
                     </div>
