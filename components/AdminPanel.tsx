@@ -334,22 +334,15 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
                 </button>
               </div>
 
-              {/* 预设号码记录列表 (仅显示今日及未来) */}
+              {/* 预设号码记录列表 */}
               <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
                 <h3 className="text-slate-900 font-black text-base flex items-center gap-2 mb-6">
-                  <i className="fas fa-calendar-check text-blue-500"></i> {t('admin.active_presets', { defaultValue: '明日の予約番号' })}
+                  <i className="fas fa-calendar-check text-blue-500"></i> {t('admin.active_presets', { defaultValue: '设置好的开奖号码列表' })}
                 </h3>
                 <div className="space-y-3">
                   {Object.entries(config.winningNumbers || {}).flatMap(([gameId, dates]) => 
                     Object.entries(dates).map(([date, nums]) => ({ gameId, date, nums }))
-                  ).filter(preset => {
-                    const jstNow = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Tokyo"}));
-                    const tomorrow = new Date(jstNow);
-                    tomorrow.setDate(tomorrow.getDate() + 1);
-                    const tomorrowStr = tomorrow.toLocaleDateString('sv-SE');
-                    // 仅显示明天的预设号码
-                    return preset.date === tomorrowStr;
-                  }).sort((a, b) => a.date.localeCompare(b.date)).map((preset, idx) => {
+                  ).sort((a, b) => b.date.localeCompare(a.date)).map((preset, idx) => {
                     const game = games.find(g => g.id === preset.gameId);
                     return (
                       <div key={idx} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100 hover:border-blue-200 transition-all">
@@ -358,7 +351,7 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
                           <div>
                             <div className="flex items-center gap-2 mb-1">
                               <span className="text-xs font-black text-slate-900">{game?.name || preset.gameId}</span>
-                              <span className="text-[10px] text-slate-400 font-bold">{preset.date}</span>
+                              <span className="text-[10px] text-slate-500 font-bold bg-slate-200 px-2 py-0.5 rounded-full">{preset.date}</span>
                             </div>
                             <div className="flex gap-1">
                               {preset.nums.map((n, i) => (
@@ -381,13 +374,7 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
                   })}
                   {(!config.winningNumbers || Object.entries(config.winningNumbers).flatMap(([gameId, dates]) => 
                     Object.entries(dates).map(([date, nums]) => ({ gameId, date, nums }))
-                  ).filter(preset => {
-                    const jstNow = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Tokyo"}));
-                    const tomorrow = new Date(jstNow);
-                    tomorrow.setDate(tomorrow.getDate() + 1);
-                    const tomorrowStr = tomorrow.toLocaleDateString('sv-SE');
-                    return preset.date === tomorrowStr;
-                  }).length === 0) && (
+                  ).length === 0) && (
                     <div className="py-10 text-center text-slate-300 italic text-xs">
                       {t('admin.no_presets')}
                     </div>

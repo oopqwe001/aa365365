@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AppView, LotteryGame, Selection, User, AdminConfig, Purchase, Transaction } from './types';
-import { lotteryApi } from './services/api';
+import { lotteryApi, getTargetDrawDate } from './services/api';
 import { auth, db } from './services/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { onSnapshot, collection, doc } from 'firebase/firestore';
@@ -145,9 +145,9 @@ const App: React.FC = () => {
         const jstNow = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Tokyo"}));
         const jstTodayStr = jstNow.toLocaleDateString('sv-SE'); // YYYY-MM-DD in JST
         
-        const datesToCheck = [jstTodayStr];
-        // 检查过去 3 天
-        for (let i = 1; i <= 3; i++) {
+        const datesToCheck: string[] = [];
+        // 从最旧的日期到最新的日期 (如 3天前 -> 今天)，顺序执行开奖，防止新日期抢先结算旧彩票
+        for (let i = 3; i >= 0; i--) {
           const d = new Date(jstNow);
           d.setDate(d.getDate() - i);
           datesToCheck.push(d.toLocaleDateString('sv-SE'));
@@ -155,9 +155,13 @@ const App: React.FC = () => {
         
         for (const date of datesToCheck) {
           const gamesToProcess = GAMES.filter(game => {
-            // 如果中奖号码缺失，或者有未处理的订单，则执行开奖
+            // 如果中奖号码缺失，或者有未处理的订单（或属于该日期的误判订单），则执行开奖
             const hasWinningNumbers = currentConfig.winningNumbers[game.id] && currentConfig.winningNumbers[game.id][date];
-            const hasPendingPurchases = currentUsers.some(u => u.purchases.some(p => p.gameId === game.id && !p.isProcessed));
+            const hasPendingPurchases = currentUsers.some(u => u.purchases.some(p => {
+              if (p.gameId !== game.id) return false;
+              const targetDate = getTargetDrawDate(p.timestamp, p.drawDate);
+              return (!p.isProcessed && targetDate <= date) || (p.isProcessed && p.status === 'lost' && targetDate === date && p.drawDate !== date);
+            }));
             return !hasWinningNumbers || hasPendingPurchases;
           });
           
@@ -399,7 +403,7 @@ const App: React.FC = () => {
           {view === 'deposit' && <DepositView onBack={() => setView('mypage')} onSubmit={handleDepositSubmit} />}
           {view === 'withdraw' && <WithdrawForm onBack={() => setView('mypage')} onSubmit={handleWithdrawSubmit} />}
           {view === 'transactions' && <TransactionHistory userId={activeUser.id} transactions={transactions} onBack={() => setView('mypage')} />}
-          {view === 'purchases' && <PurchaseHistory purchases={activeUser.purchases} games={GAMES} onBack={() => setView('mypage')} onShare={(p) => { setSelectedPurchase(p); setView('share-win'); }} />}
+          {view === 'purchases' && <PurchaseHistory purchases={activeUser.purchases} games={GAMES} history={filteredWinningNumbers} onBack={() => setView('mypage')} onShare={(p) => { setSelectedPurchase(p); setView('share-win'); }} />}
           {view === 'share-win' && selectedPurchase && <ShareWinView purchase={selectedPurchase} game={GAMES.find(g => g.id === selectedPurchase.gameId)} onBack={() => setView('purchases')} />}
           {view === 'register' && <RegisterView onBack={() => setView('home')} onSuccess={handleRegister} />}
           {view === 'login' && <LoginView onBack={() => setView('home')} onSuccess={handleLogin} onGoToRegister={() => setView('register')} />}

@@ -2,15 +2,17 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Purchase, LotteryGame } from '../types';
+import { getTargetDrawDate } from '../services/api';
 
 interface Props {
   purchases: Purchase[];
   games: LotteryGame[];
+  history?: Record<string, Record<string, number[]>>;
   onBack: () => void;
   onShare: (purchase: Purchase) => void;
 }
 
-const PurchaseHistory: React.FC<Props> = ({ purchases, games, onBack, onShare }) => {
+const PurchaseHistory: React.FC<Props> = ({ purchases, games, history, onBack, onShare }) => {
   const { t, i18n } = useTranslation();
   const getGame = (id: string) => games.find(g => g.id === id);
 
@@ -35,11 +37,8 @@ const PurchaseHistory: React.FC<Props> = ({ purchases, games, onBack, onShare })
           sortedPurchases.map((p) => {
             const game = getGame(p.gameId);
             const pDate = new Date(p.timestamp);
-            const drawDateStr = p.drawDate || (() => {
-              const drawDate = new Date(pDate.toLocaleString("en-US", {timeZone: "Asia/Tokyo"}));
-              drawDate.setDate(drawDate.getDate() + 1);
-              return drawDate.toLocaleDateString('sv-SE');
-            })();
+            const drawDateStr = getTargetDrawDate(p.timestamp, p.drawDate);
+            const drawWinningNums = history?.[p.gameId]?.[drawDateStr] || [];
 
             const date = pDate.toLocaleString(i18n.language === 'ko' ? 'ko-KR' : 'ja-JP', {
               month: '2-digit',
@@ -66,17 +65,21 @@ const PurchaseHistory: React.FC<Props> = ({ purchases, games, onBack, onShare })
                     const nums = numsStr.split(',').map(Number);
                     return (
                       <div key={idx} className="flex flex-wrap gap-1.5">
-                        {nums.map((n, i) => (
-                          <div 
-                            key={i} 
-                            className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-black border ${
-                              p.status === 'won' ? 'border-red-200' : 'bg-gray-50 border-gray-100 text-gray-600'
-                            }`}
-                            style={p.status === 'won' ? { backgroundColor: '#E6001211', color: '#E60012' } : {}}
-                          >
-                            {n}
-                          </div>
-                        ))}
+                        {nums.map((n, i) => {
+                          const isHit = drawWinningNums.includes(n);
+                          return (
+                            <div 
+                              key={i} 
+                              className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-black border transition-all ${
+                                isHit 
+                                  ? 'bg-[#E60012] text-white border-[#E60012] shadow-sm scale-105' 
+                                  : 'bg-gray-50 border-gray-100 text-gray-600'
+                              }`}
+                            >
+                              {n}
+                            </div>
+                          );
+                        })}
                       </div>
                     );
                   })}

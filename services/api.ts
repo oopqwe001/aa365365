@@ -94,6 +94,19 @@ const generateRandomNumbers = (count: number, max: number): number[] => {
   return nums.sort((a, b) => a - b);
 };
 
+export const getTargetDrawDate = (timestamp: number, explicitDrawDate?: string): string => {
+  if (explicitDrawDate) return explicitDrawDate;
+  const pDate = new Date(timestamp);
+  const jstDate = new Date(pDate.toLocaleString("en-US", { timeZone: "Asia/Tokyo" }));
+  // 如果购买时间是在日本时间 19:00 之后，算作后天开奖，否则算作明天开奖
+  if (jstDate.getHours() >= 19) {
+    jstDate.setDate(jstDate.getDate() + 2);
+  } else {
+    jstDate.setDate(jstDate.getDate() + 1);
+  }
+  return jstDate.toLocaleDateString('sv-SE');
+};
+
 export const lotteryApi = {
   async getActiveUser(): Promise<User> {
     const savedUser = localStorage.getItem('lottery_user');
@@ -349,15 +362,17 @@ export const lotteryApi = {
 
       if (user.balance < totalCost) return { success: false, message: "残高が不足しています。" };
 
+      const now = Date.now();
       const newPurchase: Purchase = {
         id: 'P' + Math.random().toString(36).substr(2, 6).toUpperCase(),
         userId: user.id,
         gameId: game.id,
         numbers: validSelections.map(s => s.numbers.join(',')),
-        timestamp: Date.now(),
+        timestamp: now,
         isProcessed: false,
         status: 'pending',
-        winAmount: 0
+        winAmount: 0,
+        drawDate: getTargetDrawDate(now)
       };
 
       const updatedPurchases = [...user.purchases, newPurchase];
@@ -409,11 +424,17 @@ export const lotteryApi = {
         for (const user of users) {
           let userChanged = false;
           for (const p of user.purchases) {
-            // 获取彩票购买时的日本时间日期 (YYYY-MM-DD)
+            const targetDrawDate = getTargetDrawDate(p.timestamp, p.drawDate);
             const pDateStr = new Date(p.timestamp).toLocaleDateString('sv-SE', {timeZone: 'Asia/Tokyo'});
             
-            // 只有当彩票日期在开奖日期之前（不含当天，确保“今天买，明天开”），且未处理时，才进行结算
-            if (p.gameId === game.id && !p.isProcessed && pDateStr < date) {
+            // 满足以下条件之一则结算：
+            // 1. 彩票的目标开奖日期恰好是当前的开奖日期 (targetDrawDate === date)
+            // 2. 彩票购买日期在开奖日期或之前，且尚未处理 (!p.isProcessed && pDateStr <= date)
+            // 3. 之前由于日期错配误判为 lost 的彩票，若真实开奖结果中奖，重新修复并发放奖金
+            const isMatchForDraw = (targetDrawDate === date) || (!p.isProcessed && pDateStr <= date);
+            const isReprocessNeeded = p.isProcessed && p.status === 'lost' && p.drawDate !== date && targetDrawDate === date;
+
+            if (p.gameId === game.id && (!p.isProcessed || isReprocessNeeded) && isMatchForDraw) {
               let totalPrize = 0;
               let winningRanks: string[] = [];
               let hasWon = false;
@@ -424,25 +445,34 @@ export const lotteryApi = {
                 let prize = 0;
                 let rank = "";
                 
-                const prizeSettings = config.prizeSettings?.[game.id] || { rank1: 10000000, rank2: 100000, rank3: 1000 };
+                const defaultPrizes: Record<string, Record<string, number>> = {
+                  loto7: { rank1: 10000000, rank2: 100000, rank3: 1000, rank4: 500, rank5: 200, rank6: 100 },
+                  loto6: { rank1: 2000000, rank2: 50000, rank3: 800, rank4: 300, rank5: 100 },
+                  miniloto: { rank1: 1000000, rank2: 30000, rank3: 500, rank4: 200 }
+                };
+                
+                const prizeSettings = {
+                  ...(defaultPrizes[game.id] || { rank1: 10000000, rank2: 100000, rank3: 1000 }),
+                  ...(config.prizeSettings?.[game.id] || {})
+                };
                 
                 if (matchCount === game.pickCount) {
-                  prize = prizeSettings.rank1;
+                  prize = prizeSettings.rank1 || 0;
                   rank = "rank_1";
                 } else if (matchCount === game.pickCount - 1) {
-                  prize = prizeSettings.rank2;
+                  prize = prizeSettings.rank2 || 0;
                   rank = "rank_2";
                 } else if (matchCount === game.pickCount - 2) {
-                  prize = prizeSettings.rank3;
+                  prize = prizeSettings.rank3 || 0;
                   rank = "rank_3";
                 } else if (matchCount === game.pickCount - 3 && prizeSettings.rank4) {
-                  prize = prizeSettings.rank4;
+                  prize = prizeSettings.rank4 || 0;
                   rank = "rank_4";
                 } else if (matchCount === game.pickCount - 4 && prizeSettings.rank5) {
-                  prize = prizeSettings.rank5;
+                  prize = prizeSettings.rank5 || 0;
                   rank = "rank_5";
                 } else if (matchCount === game.pickCount - 5 && prizeSettings.rank6) {
-                  prize = prizeSettings.rank6;
+                  prize = prizeSettings.rank6 || 0;
                   rank = "rank_6";
                 }
                 
