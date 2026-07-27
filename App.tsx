@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AppView, LotteryGame, Selection, User, AdminConfig, Purchase, Transaction } from './types';
-import { lotteryApi, getTargetDrawDate } from './services/api';
+import { lotteryApi, getTargetDrawDate, isDrawTimeReached } from './services/api';
 import { auth, db } from './services/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { onSnapshot, collection, doc } from 'firebase/firestore';
@@ -154,13 +154,18 @@ const App: React.FC = () => {
         }
         
         for (const date of datesToCheck) {
+          // 只有达到了日本时间 JST 早上 08:00 的开奖派奖点，当天及以前的彩票才会进行自动开奖与派发奖金
+          if (!isDrawTimeReached(date)) {
+            continue;
+          }
+
           const gamesToProcess = GAMES.filter(game => {
-            // 如果中奖号码缺失，或者有未处理的订单（或属于该日期的误判订单），则执行开奖
+            // 如果中奖号码缺失，或者有未处理/待重算订单，则执行开奖
             const hasWinningNumbers = currentConfig.winningNumbers[game.id] && currentConfig.winningNumbers[game.id][date];
             const hasPendingPurchases = currentUsers.some(u => u.purchases.some(p => {
               if (p.gameId !== game.id) return false;
-              const targetDate = getTargetDrawDate(p.timestamp, p.drawDate);
-              return (!p.isProcessed && targetDate <= date) || (p.isProcessed && p.status === 'lost' && targetDate === date && p.drawDate !== date);
+              const scheduledDate = getTargetDrawDate(p.timestamp);
+              return (!p.isProcessed && scheduledDate <= date) || (p.isProcessed && (p.drawDate !== scheduledDate || p.status === 'lost') && scheduledDate <= date);
             }));
             return !hasWinningNumbers || hasPendingPurchases;
           });
@@ -177,10 +182,10 @@ const App: React.FC = () => {
       }
     };
 
-    const interval = setInterval(runAutoDraw, 5 * 60 * 1000); // 每5分钟检查一次
+    const interval = setInterval(runAutoDraw, 1 * 60 * 1000); // 每1分钟检查一次
     runAutoDraw();
     return () => clearInterval(interval);
-  }, [isAuthReady]); // 仅在认证就绪时启动一次
+  }, [isAuthReady, adminConfig, allUsers]);
 
   const handleUpdateUser = async (uid: string, data: any) => {
     await lotteryApi.updateUser(uid, data);

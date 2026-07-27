@@ -107,6 +107,20 @@ export const getTargetDrawDate = (timestamp: number, explicitDrawDate?: string):
   return jstDate.toLocaleDateString('sv-SE');
 };
 
+// 判断某个开奖日期（如 '2026-07-27'）在日本时间 JST 下是否达到了 08:00 的开奖派派奖时刻
+export const isDrawTimeReached = (drawDateStr: string): boolean => {
+  const jstNow = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Tokyo" }));
+  const todayJstStr = jstNow.toLocaleDateString('sv-SE');
+
+  if (todayJstStr > drawDateStr) {
+    return true; // 过去历史日期已达开奖点
+  }
+  if (todayJstStr === drawDateStr) {
+    return jstNow.getHours() >= 8; // 日本时间今天早上 08:00 及以后才算到达开奖点
+  }
+  return false; // 未来日期
+};
+
 export const lotteryApi = {
   async getActiveUser(): Promise<User> {
     const savedUser = localStorage.getItem('lottery_user');
@@ -424,24 +438,31 @@ export const lotteryApi = {
         for (const user of users) {
           let userChanged = false;
           for (const p of user.purchases) {
-            const targetDrawDate = getTargetDrawDate(p.timestamp, p.drawDate);
-            const pDateStr = new Date(p.timestamp).toLocaleDateString('sv-SE', {timeZone: 'Asia/Tokyo'});
-            
-            // 满足以下条件之一则结算：
-            // 1. 彩票的目标开奖日期恰好是当前的开奖日期 (targetDrawDate === date)
-            // 2. 彩票购买日期在开奖日期或之前，且尚未处理 (!p.isProcessed && pDateStr <= date)
-            // 3. 之前由于日期错配误判为 lost 的彩票，若真实开奖结果中奖，重新修复并发放奖金
-            const isMatchForDraw = (targetDrawDate === date) || (!p.isProcessed && pDateStr <= date);
-            const isReprocessNeeded = p.isProcessed && p.status === 'lost' && p.drawDate !== date && targetDrawDate === date;
+            if (p.gameId !== game.id) continue;
 
-            if (p.gameId === game.id && (!p.isProcessed || isReprocessNeeded) && isMatchForDraw) {
+            // 计算彩票依据购买时间推算出的计划开奖日期
+            const scheduledDrawDate = getTargetDrawDate(p.timestamp);
+            
+            // 只有当当前的开奖日期 date >= 彩票计划开奖日期 scheduledDrawDate 且已经到了日本时间 JST 早上 08:00 开奖派奖时间点，才允许自动结算
+            const isEligible = scheduledDrawDate <= date && isDrawTimeReached(scheduledDrawDate);
+            
+            // 需要处理的条件：
+            // 1. 彩票尚未处理 (!p.isProcessed)
+            // 2. 彩票之前被提前或错配结算 (p.drawDate !== scheduledDrawDate)
+            // 3. 之前判定为 lost 但实际中奖需更正
+            const isReprocessNeeded = p.isProcessed && (p.drawDate !== scheduledDrawDate || p.status === 'lost');
+
+            if (isEligible && (!p.isProcessed || isReprocessNeeded)) {
+              // 优先使用彩票计划开奖日期的开奖号码，若尚未生成则使用当前 date 的号码
+              const targetWinningNums = config.winningNumbers[game.id]?.[scheduledDrawDate] || drawResult;
+
               let totalPrize = 0;
               let winningRanks: string[] = [];
               let hasWon = false;
 
               p.numbers.forEach(pickedNumsStr => {
                 const pickedNums = pickedNumsStr.split(',').map(Number);
-                const matchCount = pickedNums.filter(n => drawResult.includes(n)).length;
+                const matchCount = pickedNums.filter(n => targetWinningNums.includes(n)).length;
                 let prize = 0;
                 let rank = "";
                 
@@ -484,17 +505,22 @@ export const lotteryApi = {
               });
 
               if (hasWon) {
+                const prevWinAmount = (p.status === 'won' && p.winAmount) ? p.winAmount : 0;
                 p.status = 'won';
                 p.winAmount = totalPrize;
                 p.rank = winningRanks.join(', ');
-                user.balance += totalPrize;
+                user.balance = user.balance - prevWinAmount + totalPrize;
               } else {
+                if (p.status === 'won' && p.winAmount) {
+                  user.balance -= p.winAmount;
+                }
                 p.status = 'lost';
                 p.winAmount = 0;
+                p.rank = '';
               }
               
               p.isProcessed = true;
-              p.drawDate = date;
+              p.drawDate = scheduledDrawDate;
               userChanged = true;
             }
           }

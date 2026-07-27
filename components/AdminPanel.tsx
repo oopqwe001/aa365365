@@ -2,6 +2,7 @@
 import React, { useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AdminConfig, User, Transaction, LotteryGame } from '../types';
+import { lotteryApi } from '../services/api';
 
 interface Props {
   config: AdminConfig;
@@ -56,6 +57,23 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
     
     setConfig({ ...config, winningNumbers: newWinningNumbers });
     setPresetNums('');
+  };
+
+  const [isExecutingDraw, setIsExecutingDraw] = useState(false);
+
+  const handleManualExecuteDraw = async (gameId: string, date: string) => {
+    const game = games.find(g => g.id === gameId);
+    if (!game) return;
+    setIsExecutingDraw(true);
+    try {
+      await lotteryApi.executeDraw(date, [game]);
+      alert(`${game.name} (${date}) 的开奖与派奖结算已完成！`);
+    } catch (err) {
+      console.error(err);
+      alert('手动开奖结算失败');
+    } finally {
+      setIsExecutingDraw(false);
+    }
   };
 
   const handleDeletePreset = (gameId: string, date: string) => {
@@ -431,13 +449,23 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
                             </div>
                           </div>
                         </div>
-                        <button 
-                          onClick={() => handleDeletePreset(preset.gameId, preset.date)}
-                          className="text-rose-500 hover:text-rose-600 p-2 transition-colors"
-                          title={t('admin.delete_preset')}
-                        >
-                          <i className="fas fa-trash-alt"></i>
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button 
+                            onClick={() => handleManualExecuteDraw(preset.gameId, preset.date)}
+                            className="px-3 py-1.5 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 text-emerald-700 rounded-lg text-xs font-bold flex items-center gap-1 transition-all"
+                            title="立即按此开奖号码开奖并结算奖金"
+                          >
+                            <i className="fas fa-play text-[10px]"></i>
+                            立即结算派奖
+                          </button>
+                          <button 
+                            onClick={() => handleDeletePreset(preset.gameId, preset.date)}
+                            className="text-rose-500 hover:text-rose-600 p-2 transition-colors"
+                            title={t('admin.delete_preset')}
+                          >
+                            <i className="fas fa-trash-alt"></i>
+                          </button>
+                        </div>
                       </div>
                     );
                   })}

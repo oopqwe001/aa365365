@@ -67,12 +67,16 @@ const PurchaseHistory: React.FC<Props> = ({ purchases, games, history, onBack, o
                       <div key={idx} className="flex flex-wrap gap-1.5">
                         {nums.map((n, i) => {
                           const isHit = drawWinningNums.includes(n);
+                          // 仅在已处理开奖(p.isProcessed或status!='pending')或明确中奖时高亮红圈，未开奖前保持普通显示以防误解
+                          const isProcessed = p.isProcessed || p.status !== 'pending';
                           return (
                             <div 
                               key={i} 
                               className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-black border transition-all ${
-                                isHit 
+                                (isHit && isProcessed)
                                   ? 'bg-[#E60012] text-white border-[#E60012] shadow-sm scale-105' 
+                                  : (isHit && !isProcessed)
+                                  ? 'bg-blue-50 text-blue-600 border-blue-200'
                                   : 'bg-gray-50 border-gray-100 text-gray-600'
                               }`}
                             >
@@ -96,6 +100,11 @@ const PurchaseHistory: React.FC<Props> = ({ purchases, games, history, onBack, o
                     >
                       {p.status === 'won' ? t('history.status_won') : p.status === 'lost' ? t('history.status_lost') : t('history.status_pending')}
                     </span>
+                    {p.status === 'pending' && (
+                      <span className="text-[10px] text-blue-500 font-normal">
+                        (抽せん待ち - 日本時間 {drawDateStr} 08:00 振込)
+                      </span>
+                    )}
                   </div>
                   {p.status === 'won' && (
                     <div className="flex items-center gap-3">
