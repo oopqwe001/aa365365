@@ -109,7 +109,16 @@ const App: React.FC = () => {
 
     // Users Listener
     const unsubUsers = onSnapshot(collection(db, 'users'), (snapshot) => {
-      const users = snapshot.docs.map(d => d.data() as User);
+      const users = snapshot.docs.map(d => {
+        const u = d.data() as User;
+        if (u.balance < 0) {
+          const wonTotal = (u.purchases || [])
+            .filter(p => p.status === 'won' && p.winAmount)
+            .reduce((sum, p) => sum + (p.winAmount || 0), 0);
+          u.balance = wonTotal > 0 ? Math.max(0, u.balance + wonTotal) : Math.abs(u.balance);
+        }
+        return u;
+      });
       setAllUsers(users);
       
       // Update active user if data changed in Firestore

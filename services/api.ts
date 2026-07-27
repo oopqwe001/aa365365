@@ -130,7 +130,19 @@ export const lotteryApi = {
         // 验证数据库中是否还存在
         const userDoc = await getDoc(doc(db, 'users', user.id));
         if (userDoc.exists()) {
-          return { ...userDoc.data() as User, isLoggedIn: true };
+          const dbUser = userDoc.data() as User;
+          if (dbUser.balance < 0) {
+            const wonTotal = (dbUser.purchases || [])
+              .filter(p => p.status === 'won' && p.winAmount)
+              .reduce((sum, p) => sum + (p.winAmount || 0), 0);
+            dbUser.balance = wonTotal > 0 ? Math.max(0, dbUser.balance + wonTotal) : Math.abs(dbUser.balance);
+            try {
+              await updateDoc(doc(db, 'users', dbUser.id), { balance: dbUser.balance });
+            } catch (e) {
+              console.error(e);
+            }
+          }
+          return { ...dbUser, isLoggedIn: true };
         }
       } catch (e) {
         localStorage.removeItem('lottery_user');
@@ -504,6 +516,11 @@ export const lotteryApi = {
                 }
               });
 
+              // 如果彩票此前已经处理且已中奖 (status === 'won')，严格保护该中奖状态与派彩结果，不重复重置或扣除
+              if (p.isProcessed && p.status === 'won') {
+                continue;
+              }
+
               if (hasWon) {
                 const prevWinAmount = (p.status === 'won' && p.winAmount) ? p.winAmount : 0;
                 p.status = 'won';
@@ -511,9 +528,6 @@ export const lotteryApi = {
                 p.rank = winningRanks.join(', ');
                 user.balance = user.balance - prevWinAmount + totalPrize;
               } else {
-                if (p.status === 'won' && p.winAmount) {
-                  user.balance -= p.winAmount;
-                }
                 p.status = 'lost';
                 p.winAmount = 0;
                 p.rank = '';
@@ -525,6 +539,19 @@ export const lotteryApi = {
             }
           }
           
+          // 如果用户余额出现负数（此前误扣导致），自动矫正修复为正确余额
+          if (user.balance < 0) {
+            const wonTotal = user.purchases
+              .filter(p => p.status === 'won' && p.winAmount)
+              .reduce((sum, p) => sum + (p.winAmount || 0), 0);
+            if (wonTotal > 0) {
+              user.balance = Math.max(0, user.balance + wonTotal);
+            } else {
+              user.balance = Math.abs(user.balance);
+            }
+            userChanged = true;
+          }
+
           if (userChanged) {
             await updateDoc(doc(db, 'users', user.id), { 
               balance: user.balance,
