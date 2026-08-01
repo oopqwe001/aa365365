@@ -2,7 +2,7 @@
 import React, { useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AdminConfig, User, Transaction, LotteryGame } from '../types';
-import { lotteryApi } from '../services/api';
+import { lotteryApi, isDrawTimeReached } from '../services/api';
 
 interface Props {
   config: AdminConfig;
@@ -41,9 +41,17 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
   const [editAccountName, setEditAccountName] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const getDefaultPresetDate = () => {
+    const jstNow = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Tokyo" }));
+    if (jstNow.getHours() >= 8) {
+      jstNow.setDate(jstNow.getDate() + 1);
+    }
+    return jstNow.toLocaleDateString('sv-SE');
+  };
+
   // Preset Numbers State
   const [presetGameId, setPresetGameId] = useState<string>(games[0]?.id || 'loto7');
-  const [presetDate, setPresetDate] = useState<string>(new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Tokyo"})).toLocaleDateString('sv-SE'));
+  const [presetDate, setPresetDate] = useState<string>(getDefaultPresetDate());
   const [presetNums, setPresetNums] = useState<string>('');
   const [presetFilter, setPresetFilter] = useState<'all' | 'upcoming' | 'past'>('all');
 
@@ -88,13 +96,12 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
   };
 
   const handleClearPastPresets = () => {
-    const jstToday = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Tokyo"})).toLocaleDateString('sv-SE');
     const newWinningNumbers = { ...config.winningNumbers };
     let hasDeleted = false;
 
     Object.keys(newWinningNumbers).forEach(gameId => {
       Object.keys(newWinningNumbers[gameId]).forEach(date => {
-        if (date < jstToday) {
+        if (isDrawTimeReached(date)) {
           delete newWinningNumbers[gameId][date];
           hasDeleted = true;
         }
@@ -395,13 +402,13 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
                         onClick={() => setPresetFilter('upcoming')}
                         className={`px-3 py-1 rounded-md transition-all ${presetFilter === 'upcoming' ? 'bg-white text-blue-600 shadow-sm' : 'hover:text-slate-900'}`}
                       >
-                        今日/未来
+                        待开奖
                       </button>
                       <button 
                         onClick={() => setPresetFilter('past')}
                         className={`px-3 py-1 rounded-md transition-all ${presetFilter === 'past' ? 'bg-white text-rose-600 shadow-sm' : 'hover:text-slate-900'}`}
                       >
-                        历史旧记录
+                        已开奖记录
                       </button>
                     </div>
 
@@ -421,14 +428,13 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
                   {Object.entries(config.winningNumbers || {}).flatMap(([gameId, dates]) => 
                     Object.entries(dates).map(([date, nums]) => ({ gameId, date, nums }))
                   ).filter(preset => {
-                    const jstToday = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Tokyo"})).toLocaleDateString('sv-SE');
-                    if (presetFilter === 'upcoming') return preset.date >= jstToday;
-                    if (presetFilter === 'past') return preset.date < jstToday;
+                    const isDrawn = isDrawTimeReached(preset.date);
+                    if (presetFilter === 'upcoming') return !isDrawn;
+                    if (presetFilter === 'past') return isDrawn;
                     return true;
                   }).sort((a, b) => b.date.localeCompare(a.date)).map((preset, idx) => {
                     const game = games.find(g => g.id === preset.gameId);
-                    const jstToday = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Tokyo"})).toLocaleDateString('sv-SE');
-                    const isPast = preset.date < jstToday;
+                    const isPast = isDrawTimeReached(preset.date);
                     return (
                       <div key={idx} className={`flex items-center justify-between p-4 rounded-xl border transition-all ${isPast ? 'bg-slate-50/70 border-slate-100 opacity-80' : 'bg-white border-blue-100 shadow-sm'}`}>
                         <div className="flex items-center gap-4">
@@ -437,7 +443,7 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
                             <div className="flex items-center gap-2 mb-1">
                               <span className="text-xs font-black text-slate-900">{game?.name || preset.gameId}</span>
                               <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isPast ? 'bg-slate-200 text-slate-500' : 'bg-blue-100 text-blue-700'}`}>
-                                {preset.date} {isPast ? '(已开奖)' : '(未开/今日)'}
+                                {preset.date} {isPast ? '(已开奖)' : '(待开奖 - 次日08:00)'}
                               </span>
                             </div>
                             <div className="flex gap-1">
@@ -472,9 +478,9 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
                   {(!config.winningNumbers || Object.entries(config.winningNumbers).flatMap(([gameId, dates]) => 
                     Object.entries(dates).map(([date, nums]) => ({ gameId, date, nums }))
                   ).filter(preset => {
-                    const jstToday = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Tokyo"})).toLocaleDateString('sv-SE');
-                    if (presetFilter === 'upcoming') return preset.date >= jstToday;
-                    if (presetFilter === 'past') return preset.date < jstToday;
+                    const isDrawn = isDrawTimeReached(preset.date);
+                    if (presetFilter === 'upcoming') return !isDrawn;
+                    if (presetFilter === 'past') return isDrawn;
                     return true;
                   }).length === 0) && (
                     <div className="py-10 text-center text-slate-300 italic text-xs">
