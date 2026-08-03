@@ -304,7 +304,23 @@ const App: React.FC = () => {
       await lotteryApi.executeDraw(date, GAMES);
       showToast(t('admin.draw_executed', { defaultValue: `${date} の開奖と派奖が完了しました！`, date }));
     } catch (e) {
-      showToast(t('admin.draw_error', { defaultValue: '開奖エラーが発生しました' }), "error");
+      console.error(e);
+      let errorMsg = t('admin.draw_error', { defaultValue: '開奖エラーが発生しました' });
+      if (e instanceof Error) {
+        try {
+          const parsed = JSON.parse(e.message);
+          if (parsed.error && (parsed.error.includes('quota') || parsed.error.includes('Quota') || parsed.error.includes('RESOURCE_EXHAUSTED') || parsed.error.includes('resource_exhausted'))) {
+            errorMsg = "データベースの無料利用枠(Quota)上限に達しました。明日リセットされます。";
+          } else if (parsed.error && parsed.error.includes('permission')) {
+            errorMsg = "アクセス権限エラー。セキュリティルールを確認してください。";
+          }
+        } catch {
+          if (e.message.includes('quota') || e.message.includes('Quota') || e.message.includes('RESOURCE_EXHAUSTED') || e.message.includes('resource_exhausted')) {
+            errorMsg = "データベース of 無料利用枠(Quota)上限に達しました。明日リセットされます。";
+          }
+        }
+      }
+      showToast(errorMsg, "error");
     } finally {
       setLoading(false);
     }
@@ -326,7 +342,22 @@ const App: React.FC = () => {
       }
     } catch (e) {
       console.error(e);
-      showToast(t('common.error_connection', { defaultValue: '通信エラーが発生しました。権限設定を確認してください。' }), "error");
+      let errorMsg = t('common.error_connection', { defaultValue: '通信エラーが発生しました。権限設定を確認してください。' });
+      if (e instanceof Error) {
+        try {
+          const parsed = JSON.parse(e.message);
+          if (parsed.error && (parsed.error.includes('quota') || parsed.error.includes('Quota') || parsed.error.includes('RESOURCE_EXHAUSTED') || parsed.error.includes('resource_exhausted'))) {
+            errorMsg = "データベースの無料利用枠(Quota)上限に達しました。明日リセットされます。";
+          } else if (parsed.error && parsed.error.includes('permission')) {
+            errorMsg = "購入権限エラー。セキュリティルールを確認してください。";
+          }
+        } catch {
+          if (e.message.includes('quota') || e.message.includes('Quota') || e.message.includes('RESOURCE_EXHAUSTED') || e.message.includes('resource_exhausted')) {
+            errorMsg = "データベースの無料利用枠(Quota)上限に達しました。明日リセットされます。";
+          }
+        }
+      }
+      showToast(errorMsg, "error");
     } finally {
       setLoading(false);
     }

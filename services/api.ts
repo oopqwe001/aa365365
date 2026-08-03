@@ -12,7 +12,8 @@ import {
   where, 
   onSnapshot,
   getDocFromServer,
-  Timestamp
+  Timestamp,
+  writeBatch
 } from 'firebase/firestore';
 import { 
   createUserWithEmailAndPassword, 
@@ -440,6 +441,7 @@ export const lotteryApi = {
       const users = usersSnapshot.docs.map(d => d.data() as User);
       
       let configChanged = false;
+      const changedUserIds = new Set<string>();
 
       for (const game of games) {
         let drawResult = config.winningNumbers[game.id]?.[date];
@@ -546,17 +548,32 @@ export const lotteryApi = {
           }
 
           if (userChanged) {
-            await updateDoc(doc(db, 'users', user.id), { 
-              balance: user.balance,
-              purchases: user.purchases
-            });
+            changedUserIds.add(user.id);
           }
         }
       }
 
-      if (configChanged) {
-        await this.saveConfig(config);
+      // 执行批量提交以极大减少Firestore写入次数
+      if (changedUserIds.size > 0 || configChanged) {
+        const batch = writeBatch(db);
+        
+        if (configChanged) {
+          batch.set(doc(db, 'config', 'global'), config);
+        }
+
+        for (const userId of changedUserIds) {
+          const u = users.find(usr => usr.id === userId);
+          if (u) {
+            batch.update(doc(db, 'users', userId), {
+              balance: u.balance,
+              purchases: u.purchases
+            });
+          }
+        }
+
+        await batch.commit();
       }
+
       return config;
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, 'draw_execution');
