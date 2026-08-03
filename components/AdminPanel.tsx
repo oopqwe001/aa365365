@@ -1,5 +1,5 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AdminConfig, User, Transaction, LotteryGame } from '../types';
 import { lotteryApi, isDrawTimeReached, getJSTDateYMD } from '../services/api';
@@ -20,6 +20,14 @@ interface Props {
 const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transactions, games, onProcessTx, onUpdateTransaction, onUpdateUser, onExecuteDraw }) => {
   const { t } = useTranslation();
   const [tab, setTab] = useState<'dashboard' | 'users' | 'finance' | 'lottery' | 'system' | 'purchases'>('dashboard');
+  
+  // Local Config state to prevent frequent Firestore writes on keypresses
+  const [localConfig, setLocalConfig] = useState<AdminConfig>(config);
+
+  useEffect(() => {
+    setLocalConfig(config);
+  }, [config]);
+
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [editingTx, setEditingTx] = useState<Transaction | null>(null);
   const [showAllTxs, setShowAllTxs] = useState(false);
@@ -60,14 +68,16 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
     if (nums.length === 0) return;
     
     const newWinningNumbers = {
-      ...config.winningNumbers,
+      ...localConfig.winningNumbers,
       [presetGameId]: {
-        ...(config.winningNumbers?.[presetGameId] || {}),
+        ...(localConfig.winningNumbers?.[presetGameId] || {}),
         [presetDate]: nums
       }
     };
     
-    setConfig({ ...config, winningNumbers: newWinningNumbers });
+    const updated = { ...localConfig, winningNumbers: newWinningNumbers };
+    setLocalConfig(updated);
+    setConfig(updated);
     setPresetNums('');
   };
 
@@ -89,13 +99,13 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
   };
 
   const handleDeletePreset = (gameId: string, date: string) => {
-    if (!config.winningNumbers?.[gameId]) return;
+    if (!localConfig.winningNumbers?.[gameId]) return;
     
-    const newGameNumbers = { ...config.winningNumbers[gameId] };
+    const newGameNumbers = { ...localConfig.winningNumbers[gameId] };
     delete newGameNumbers[date];
     
     const newWinningNumbers = {
-      ...config.winningNumbers,
+      ...localConfig.winningNumbers,
       [gameId]: newGameNumbers
     };
     
@@ -103,11 +113,13 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
       delete newWinningNumbers[gameId];
     }
     
-    setConfig({ ...config, winningNumbers: newWinningNumbers });
+    const updated = { ...localConfig, winningNumbers: newWinningNumbers };
+    setLocalConfig(updated);
+    setConfig(updated);
   };
 
   const handleClearPastPresets = () => {
-    const newWinningNumbers = JSON.parse(JSON.stringify(config.winningNumbers || {}));
+    const newWinningNumbers = JSON.parse(JSON.stringify(localConfig.winningNumbers || {}));
     let hasDeleted = false;
 
     Object.keys(newWinningNumbers).forEach(gameId => {
@@ -125,7 +137,9 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
     });
 
     if (hasDeleted) {
-      setConfig({ ...config, winningNumbers: newWinningNumbers });
+      const updated = { ...localConfig, winningNumbers: newWinningNumbers };
+      setLocalConfig(updated);
+      setConfig(updated);
     }
   };
 
@@ -190,14 +204,14 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setConfig({ ...config, logoUrl: reader.result as string });
+        setLocalConfig({ ...localConfig, logoUrl: reader.result as string });
       };
       reader.readAsDataURL(file);
     }
   };
 
   const resetLogo = () => {
-    setConfig({ ...config, logoUrl: "https://www.takarakuji-official.jp/assets/img/common/logo.svg" });
+    setLocalConfig({ ...localConfig, logoUrl: "https://www.takarakuji-official.jp/assets/img/common/logo.svg" });
   };
 
   return (
@@ -438,7 +452,7 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
                 </div>
 
                 <div className="space-y-3">
-                  {Object.entries(config.winningNumbers || {}).flatMap(([gameId, dates]) => 
+                  {Object.entries(localConfig.winningNumbers || {}).flatMap(([gameId, dates]) => 
                     Object.entries(dates).map(([date, nums]) => ({ gameId, date, nums }))
                   ).filter(preset => {
                     const isDrawn = isDrawTimeReached(preset.date);
@@ -488,7 +502,7 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
                       </div>
                     );
                   })}
-                  {(!config.winningNumbers || Object.entries(config.winningNumbers).flatMap(([gameId, dates]) => 
+                  {(!localConfig.winningNumbers || Object.entries(localConfig.winningNumbers).flatMap(([gameId, dates]) => 
                     Object.entries(dates).map(([date, nums]) => ({ gameId, date, nums }))
                   ).filter(preset => {
                     const isDrawn = isDrawTimeReached(preset.date);
@@ -521,11 +535,11 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
                           <input 
                             type="number" 
                             className="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs font-black text-blue-600 outline-none focus:ring-2 ring-blue-500/20"
-                            value={config.prizeSettings?.[game.id]?.rank1 || 0}
+                            value={localConfig.prizeSettings?.[game.id]?.rank1 || 0}
                             onChange={e => {
-                              const newSettings = { ...config.prizeSettings };
+                              const newSettings = { ...localConfig.prizeSettings };
                               newSettings[game.id] = { ...newSettings[game.id], rank1: parseInt(e.target.value) || 0 };
-                              setConfig({ ...config, prizeSettings: newSettings });
+                              setLocalConfig({ ...localConfig, prizeSettings: newSettings });
                             }}
                           />
                         </div>
@@ -534,11 +548,11 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
                           <input 
                             type="number" 
                             className="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs font-black text-blue-600 outline-none focus:ring-2 ring-blue-500/20"
-                            value={config.prizeSettings?.[game.id]?.rank2 || 0}
+                            value={localConfig.prizeSettings?.[game.id]?.rank2 || 0}
                             onChange={e => {
-                              const newSettings = { ...config.prizeSettings };
+                              const newSettings = { ...localConfig.prizeSettings };
                               newSettings[game.id] = { ...newSettings[game.id], rank2: parseInt(e.target.value) || 0 };
-                              setConfig({ ...config, prizeSettings: newSettings });
+                              setLocalConfig({ ...localConfig, prizeSettings: newSettings });
                             }}
                           />
                         </div>
@@ -547,11 +561,11 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
                           <input 
                             type="number" 
                             className="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs font-black text-blue-600 outline-none focus:ring-2 ring-blue-500/20"
-                            value={config.prizeSettings?.[game.id]?.rank3 || 0}
+                            value={localConfig.prizeSettings?.[game.id]?.rank3 || 0}
                             onChange={e => {
-                              const newSettings = { ...config.prizeSettings };
+                              const newSettings = { ...localConfig.prizeSettings };
                               newSettings[game.id] = { ...newSettings[game.id], rank3: parseInt(e.target.value) || 0 };
-                              setConfig({ ...config, prizeSettings: newSettings });
+                              setLocalConfig({ ...localConfig, prizeSettings: newSettings });
                             }}
                           />
                         </div>
@@ -562,11 +576,11 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
                             <input 
                               type="number" 
                               className="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs font-black text-blue-600 outline-none focus:ring-2 ring-blue-500/20"
-                              value={config.prizeSettings?.[game.id]?.rank4 || 0}
+                              value={localConfig.prizeSettings?.[game.id]?.rank4 || 0}
                               onChange={e => {
-                                const newSettings = { ...config.prizeSettings };
+                                const newSettings = { ...localConfig.prizeSettings };
                                 newSettings[game.id] = { ...newSettings[game.id], rank4: parseInt(e.target.value) || 0 };
-                                setConfig({ ...config, prizeSettings: newSettings });
+                                setLocalConfig({ ...localConfig, prizeSettings: newSettings });
                               }}
                             />
                           </div>
@@ -578,11 +592,11 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
                             <input 
                               type="number" 
                               className="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs font-black text-blue-600 outline-none focus:ring-2 ring-blue-500/20"
-                              value={config.prizeSettings?.[game.id]?.rank5 || 0}
+                              value={localConfig.prizeSettings?.[game.id]?.rank5 || 0}
                               onChange={e => {
-                                const newSettings = { ...config.prizeSettings };
+                                const newSettings = { ...localConfig.prizeSettings };
                                 newSettings[game.id] = { ...newSettings[game.id], rank5: parseInt(e.target.value) || 0 };
-                                setConfig({ ...config, prizeSettings: newSettings });
+                                setLocalConfig({ ...localConfig, prizeSettings: newSettings });
                               }}
                             />
                           </div>
@@ -594,11 +608,11 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
                             <input 
                               type="number" 
                               className="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs font-black text-blue-600 outline-none focus:ring-2 ring-blue-500/20"
-                              value={config.prizeSettings?.[game.id]?.rank6 || 0}
+                              value={localConfig.prizeSettings?.[game.id]?.rank6 || 0}
                               onChange={e => {
-                                const newSettings = { ...config.prizeSettings };
+                                const newSettings = { ...localConfig.prizeSettings };
                                 newSettings[game.id] = { ...newSettings[game.id], rank6: parseInt(e.target.value) || 0 };
-                                setConfig({ ...config, prizeSettings: newSettings });
+                                setLocalConfig({ ...localConfig, prizeSettings: newSettings });
                               }}
                             />
                           </div>
@@ -606,6 +620,19 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
                       </div>
                     </div>
                   ))}
+                </div>
+                
+                {/* Save Button for Prize Settings */}
+                <div className="mt-6 pt-4 border-t border-slate-100 flex justify-end">
+                  <button 
+                    onClick={() => {
+                      setConfig(localConfig);
+                    }}
+                    className="px-8 py-3 bg-emerald-600 text-white rounded-xl font-black text-xs hover:bg-emerald-700 shadow-lg shadow-emerald-200 transition-all flex items-center gap-2"
+                  >
+                    <i className="fas fa-save"></i>
+                    保存奖金设置
+                  </button>
                 </div>
               </div>
             </div>
@@ -843,7 +870,7 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
                 <div className="space-y-4">
                   <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 flex flex-col items-center justify-center">
                     <div className="text-[10px] text-slate-400 mb-3 uppercase font-black">{t('admin.current_logo_preview')}</div>
-                    <img src={config.logoUrl} alt="Current Logo" className="h-8 max-w-full object-contain mb-4 filter drop-shadow-md" />
+                    <img src={localConfig.logoUrl} alt="Current Logo" className="h-8 max-w-full object-contain mb-4 filter drop-shadow-md" />
                   </div>
                   
                   <div>
@@ -876,8 +903,8 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
                     <input 
                       type="text" 
                       className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm font-bold text-slate-700 outline-none focus:ring-2 ring-blue-500/20"
-                      value={config.logoUrl}
-                      onChange={e => setConfig({...config, logoUrl: e.target.value})}
+                      value={localConfig.logoUrl}
+                      onChange={e => setLocalConfig({...localConfig, logoUrl: e.target.value})}
                     />
                   </div>
                 </div>
@@ -891,12 +918,17 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
                     <input 
                       type="text" 
                       className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm font-bold text-blue-600 outline-none focus:ring-2 ring-blue-500/20"
-                      value={config.lineLink}
-                      onChange={e => setConfig({...config, lineLink: e.target.value})}
+                      value={localConfig.lineLink}
+                      onChange={e => setLocalConfig({...localConfig, lineLink: e.target.value})}
                     />
                   </div>
                   <div className="pt-4 border-t border-slate-100">
-                    <button className="w-full bg-emerald-600 text-white py-3.5 rounded-xl font-black text-sm hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200">
+                    <button 
+                      onClick={() => {
+                        setConfig(localConfig);
+                      }}
+                      className="w-full bg-emerald-600 text-white py-3.5 rounded-xl font-black text-sm hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200"
+                    >
                       {t('admin.apply_settings')}
                     </button>
                   </div>
