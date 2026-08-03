@@ -2,6 +2,7 @@
 import React from 'react';
 import { LotteryGame } from '../types';
 import { useTranslation } from 'react-i18next';
+import { getJSTDateYMD } from '../services/api';
 
 interface Props {
   games: LotteryGame[];
@@ -12,7 +13,7 @@ interface Props {
 
 const GameList: React.FC<Props> = ({ games, onBuy, onShowHistory, winningNumbers }) => {
   const { t, i18n } = useTranslation();
-  const today = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Tokyo"})).toLocaleDateString('sv-SE');
+  const today = getJSTDateYMD(new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Tokyo"})));
 
   return (
     <div className="p-3 space-y-4 view-transition bg-[#f2f2f2]">

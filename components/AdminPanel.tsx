@@ -2,7 +2,7 @@
 import React, { useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AdminConfig, User, Transaction, LotteryGame } from '../types';
-import { lotteryApi, isDrawTimeReached } from '../services/api';
+import { lotteryApi, isDrawTimeReached, getJSTDateYMD } from '../services/api';
 
 interface Props {
   config: AdminConfig;
@@ -46,7 +46,7 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
     if (jstNow.getHours() >= 8) {
       jstNow.setDate(jstNow.getDate() + 1);
     }
-    return jstNow.toLocaleDateString('sv-SE');
+    return getJSTDateYMD(jstNow);
   };
 
   // Preset Numbers State
@@ -319,7 +319,7 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
                   </div>
                 </div>
                 <div className="flex gap-4">
-                   <input type="date" className="bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:ring-2 ring-blue-500/20" defaultValue={new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Tokyo"})).toLocaleDateString('sv-SE')} id="exec-date" />
+                   <input type="date" className="bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:ring-2 ring-blue-500/20" defaultValue={getJSTDateYMD(new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Tokyo"})))} id="exec-date" />
                    <button 
                     onClick={() => {
                       const dateVal = (document.getElementById('exec-date') as HTMLInputElement).value;

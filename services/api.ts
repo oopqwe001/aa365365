@@ -95,12 +95,27 @@ const generateRandomNumbers = (count: number, max: number): number[] => {
   return nums.sort((a, b) => a - b);
 };
 
+export const getJSTDateYMD = (dateInput?: Date | number): string => {
+  const d = dateInput ? new Date(dateInput) : new Date();
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Tokyo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  });
+  const parts = formatter.formatToParts(d);
+  const year = parts.find(p => p.type === 'year')?.value || '';
+  const month = parts.find(p => p.type === 'month')?.value || '';
+  const day = parts.find(p => p.type === 'day')?.value || '';
+  return `${year}-${month}-${day}`;
+};
+
 export const getTargetDrawDate = (timestamp: number, explicitDrawDate?: string): string => {
   const pDate = new Date(timestamp);
   const jstDate = new Date(pDate.toLocaleString("en-US", { timeZone: "Asia/Tokyo" }));
   // 无论几点购买（今天 00:00:00 至 23:59:59 日本时间），都统一定为明天（+1天）早上 08:00 开奖
   jstDate.setDate(jstDate.getDate() + 1);
-  const standardNextDay = jstDate.toLocaleDateString('sv-SE');
+  const standardNextDay = getJSTDateYMD(jstDate);
 
   // 如果此前因旧规则（晚上19点后设为+2天）导致 explicitDrawDate 大于标准的次日，自动规范化修正为次日
   if (explicitDrawDate && explicitDrawDate > standardNextDay) {
@@ -112,7 +127,7 @@ export const getTargetDrawDate = (timestamp: number, explicitDrawDate?: string):
 // 判断某个开奖日期（如 '2026-07-27'）在日本时间 JST 下是否达到了 08:00 的开奖派派奖时刻
 export const isDrawTimeReached = (drawDateStr: string): boolean => {
   const jstNow = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Tokyo" }));
-  const todayJstStr = jstNow.toLocaleDateString('sv-SE');
+  const todayJstStr = getJSTDateYMD(jstNow);
 
   if (todayJstStr > drawDateStr) {
     return true; // 过去历史日期已达开奖点

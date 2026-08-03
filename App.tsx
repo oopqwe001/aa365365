@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AppView, LotteryGame, Selection, User, AdminConfig, Purchase, Transaction } from './types';
-import { lotteryApi, getTargetDrawDate, isDrawTimeReached } from './services/api';
+import { lotteryApi, getTargetDrawDate, isDrawTimeReached, getJSTDateYMD } from './services/api';
 import { auth, db } from './services/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { onSnapshot, collection, doc } from 'firebase/firestore';
@@ -152,14 +152,14 @@ const App: React.FC = () => {
       try {
         // 使用日本标准时间 (JST) 进行判断
         const jstNow = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Tokyo"}));
-        const jstTodayStr = jstNow.toLocaleDateString('sv-SE'); // YYYY-MM-DD in JST
+        const jstTodayStr = getJSTDateYMD(jstNow); // YYYY-MM-DD in JST
         
         const datesToCheck: string[] = [];
         // 从最旧的日期到最新的日期 (如 3天前 -> 今天)，顺序执行开奖，防止新日期抢先结算旧彩票
         for (let i = 3; i >= 0; i--) {
           const d = new Date(jstNow);
           d.setDate(d.getDate() - i);
-          datesToCheck.push(d.toLocaleDateString('sv-SE'));
+          datesToCheck.push(getJSTDateYMD(d));
         }
         
         for (const date of datesToCheck) {
@@ -374,7 +374,7 @@ const App: React.FC = () => {
   const filteredWinningNumbers = React.useMemo(() => {
     if (!adminConfig?.winningNumbers) return {};
     const jstNow = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Tokyo"}));
-    const todayStr = jstNow.toLocaleDateString('sv-SE');
+    const todayStr = getJSTDateYMD(jstNow);
     
     const filtered: any = {};
     Object.keys(adminConfig.winningNumbers).forEach(gameId => {
