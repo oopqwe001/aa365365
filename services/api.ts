@@ -573,7 +573,16 @@ export const lotteryApi = {
         const batch = writeBatch(db);
         
         if (configChanged) {
-          batch.set(doc(db, 'config', 'global'), config);
+          const configUpdate: Record<string, any> = {};
+          for (const game of games) {
+            const drawResult = config.winningNumbers[game.id]?.[date];
+            if (drawResult) {
+              configUpdate[`winningNumbers.${game.id}.${date}`] = drawResult;
+            }
+          }
+          if (Object.keys(configUpdate).length > 0) {
+            batch.update(doc(db, 'config', 'global'), configUpdate);
+          }
         }
 
         for (const userId of changedUserIds) {

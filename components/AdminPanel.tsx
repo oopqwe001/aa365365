@@ -59,9 +59,13 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
     const nums = presetNums.split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n));
     if (nums.length === 0) return;
     
-    const newWinningNumbers = { ...config.winningNumbers };
-    if (!newWinningNumbers[presetGameId]) newWinningNumbers[presetGameId] = {};
-    newWinningNumbers[presetGameId][presetDate] = nums;
+    const newWinningNumbers = {
+      ...config.winningNumbers,
+      [presetGameId]: {
+        ...(config.winningNumbers?.[presetGameId] || {}),
+        [presetDate]: nums
+      }
+    };
     
     setConfig({ ...config, winningNumbers: newWinningNumbers });
     setPresetNums('');
@@ -85,29 +89,38 @@ const AdminPanel: React.FC<Props> = ({ config, setConfig, onBack, users, transac
   };
 
   const handleDeletePreset = (gameId: string, date: string) => {
-    const newWinningNumbers = { ...config.winningNumbers };
-    if (newWinningNumbers[gameId]) {
-      delete newWinningNumbers[gameId][date];
-      if (Object.keys(newWinningNumbers[gameId]).length === 0) {
-        delete newWinningNumbers[gameId];
-      }
-      setConfig({ ...config, winningNumbers: newWinningNumbers });
+    if (!config.winningNumbers?.[gameId]) return;
+    
+    const newGameNumbers = { ...config.winningNumbers[gameId] };
+    delete newGameNumbers[date];
+    
+    const newWinningNumbers = {
+      ...config.winningNumbers,
+      [gameId]: newGameNumbers
+    };
+    
+    if (Object.keys(newGameNumbers).length === 0) {
+      delete newWinningNumbers[gameId];
     }
+    
+    setConfig({ ...config, winningNumbers: newWinningNumbers });
   };
 
   const handleClearPastPresets = () => {
-    const newWinningNumbers = { ...config.winningNumbers };
+    const newWinningNumbers = JSON.parse(JSON.stringify(config.winningNumbers || {}));
     let hasDeleted = false;
 
     Object.keys(newWinningNumbers).forEach(gameId => {
-      Object.keys(newWinningNumbers[gameId]).forEach(date => {
-        if (isDrawTimeReached(date)) {
-          delete newWinningNumbers[gameId][date];
-          hasDeleted = true;
+      if (newWinningNumbers[gameId]) {
+        Object.keys(newWinningNumbers[gameId]).forEach(date => {
+          if (isDrawTimeReached(date)) {
+            delete newWinningNumbers[gameId][date];
+            hasDeleted = true;
+          }
+        });
+        if (Object.keys(newWinningNumbers[gameId]).length === 0) {
+          delete newWinningNumbers[gameId];
         }
-      });
-      if (Object.keys(newWinningNumbers[gameId]).length === 0) {
-        delete newWinningNumbers[gameId];
       }
     });
 
