@@ -439,6 +439,8 @@ export const lotteryApi = {
       const usersSnapshot = await getDocs(collection(db, 'users'));
       const users = usersSnapshot.docs.map(d => d.data() as User);
       
+      let configChanged = false;
+
       for (const game of games) {
         let drawResult = config.winningNumbers[game.id]?.[date];
         
@@ -446,6 +448,7 @@ export const lotteryApi = {
           drawResult = generateRandomNumbers(game.pickCount, game.maxNumber);
           if (!config.winningNumbers[game.id]) config.winningNumbers[game.id] = {};
           config.winningNumbers[game.id][date] = drawResult;
+          configChanged = true;
         }
 
         for (const user of users) {
@@ -456,16 +459,10 @@ export const lotteryApi = {
             // 计算彩票依据购买时间推算出的计划开奖日期
             const scheduledDrawDate = getTargetDrawDate(p.timestamp);
             
-            // 只有当当前的开奖日期 date >= 彩票计划开奖日期 scheduledDrawDate 且已经到了日本时间 JST 早上 08:00 开奖派奖时间点，才允许自动结算
-            const isEligible = scheduledDrawDate <= date && isDrawTimeReached(scheduledDrawDate);
-            
-            // 需要处理的条件：
-            // 1. 彩票尚未处理 (!p.isProcessed)
-            // 2. 彩票之前被提前或错配结算 (p.drawDate !== scheduledDrawDate)
-            // 3. 之前判定为 lost 但实际中奖需更正
-            const isReprocessNeeded = p.isProcessed && (p.drawDate !== scheduledDrawDate || p.status === 'lost');
+            // 只有当当前的开奖日期 date >= 彩票计划开奖日期 scheduledDrawDate 且已经到了日本时间 JST 早上 08:00 开奖派奖时间点，且该彩票为待开奖（!p.isProcessed），才允许进行开奖计算
+            const isEligible = !p.isProcessed && scheduledDrawDate <= date && isDrawTimeReached(scheduledDrawDate);
 
-            if (isEligible && (!p.isProcessed || isReprocessNeeded)) {
+            if (isEligible) {
               // 优先使用彩票计划开奖日期的开奖号码，若尚未生成则使用当前 date 的号码
               const targetWinningNums = config.winningNumbers[game.id]?.[scheduledDrawDate] || drawResult;
 
@@ -517,11 +514,6 @@ export const lotteryApi = {
                 }
               });
 
-              // 如果彩票此前已经处理且已中奖 (status === 'won')，严格保护该中奖状态与派彩结果，不重复重置或扣除
-              if (p.isProcessed && p.status === 'won') {
-                continue;
-              }
-
               if (hasWon) {
                 const prevWinAmount = (p.status === 'won' && p.winAmount) ? p.winAmount : 0;
                 p.status = 'won';
@@ -562,7 +554,9 @@ export const lotteryApi = {
         }
       }
 
-      await this.saveConfig(config);
+      if (configChanged) {
+        await this.saveConfig(config);
+      }
       return config;
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, 'draw_execution');

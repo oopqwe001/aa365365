@@ -169,12 +169,12 @@ const App: React.FC = () => {
           }
 
           const gamesToProcess = GAMES.filter(game => {
-            // 如果中奖号码缺失，或者有未处理/待重算订单，则执行开奖
+            // 检查是否有确实待开奖的彩票或尚无号码
             const hasWinningNumbers = currentConfig.winningNumbers[game.id] && currentConfig.winningNumbers[game.id][date];
             const hasPendingPurchases = currentUsers.some(u => u.purchases.some(p => {
               if (p.gameId !== game.id) return false;
               const scheduledDate = getTargetDrawDate(p.timestamp);
-              return (!p.isProcessed && scheduledDate <= date) || (p.isProcessed && (p.drawDate !== scheduledDate || p.status === 'lost') && scheduledDate <= date);
+              return !p.isProcessed && scheduledDate <= date && isDrawTimeReached(scheduledDate);
             }));
             return !hasWinningNumbers || hasPendingPurchases;
           });
@@ -191,10 +191,10 @@ const App: React.FC = () => {
       }
     };
 
-    const interval = setInterval(runAutoDraw, 1 * 60 * 1000); // 每1分钟检查一次
+    const interval = setInterval(runAutoDraw, 1 * 60 * 1000); // 每1分钟定期检查一次
     runAutoDraw();
     return () => clearInterval(interval);
-  }, [isAuthReady, adminConfig, allUsers]);
+  }, [isAuthReady]);
 
   const handleUpdateUser = async (uid: string, data: any) => {
     await lotteryApi.updateUser(uid, data);
