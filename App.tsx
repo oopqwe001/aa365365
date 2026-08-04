@@ -43,6 +43,7 @@ const App: React.FC = () => {
 
   const adminConfigRef = React.useRef<AdminConfig | null>(null);
   const allUsersRef = React.useRef<User[]>([]);
+  const activeUserRef = React.useRef<User | null>(null);
 
   useEffect(() => {
     adminConfigRef.current = adminConfig;
@@ -51,6 +52,10 @@ const App: React.FC = () => {
   useEffect(() => {
     allUsersRef.current = allUsers;
   }, [allUsers]);
+
+  useEffect(() => {
+    activeUserRef.current = activeUser;
+  }, [activeUser]);
 
   const GAMES: LotteryGame[] = GAMES_DATA.map(g => ({
     ...g,
@@ -171,11 +176,21 @@ const App: React.FC = () => {
           const gamesToProcess = GAMES.filter(game => {
             // 检查是否有确实待开奖的彩票或尚无号码
             const hasWinningNumbers = currentConfig.winningNumbers[game.id] && currentConfig.winningNumbers[game.id][date];
-            const hasPendingPurchases = currentUsers.some(u => u.purchases.some(p => {
+            
+            const hasPendingInAllUsers = currentUsers.some(u => u.purchases.some(p => {
               if (p.gameId !== game.id) return false;
               const scheduledDate = getTargetDrawDate(p.timestamp);
               return !p.isProcessed && scheduledDate <= date && isDrawTimeReached(scheduledDate);
             }));
+
+            const curActiveUser = activeUserRef.current;
+            const hasPendingInActiveUser = curActiveUser && curActiveUser.purchases && curActiveUser.purchases.some(p => {
+              if (p.gameId !== game.id) return false;
+              const scheduledDate = getTargetDrawDate(p.timestamp);
+              return !p.isProcessed && scheduledDate <= date && isDrawTimeReached(scheduledDate);
+            });
+
+            const hasPendingPurchases = hasPendingInAllUsers || hasPendingInActiveUser;
             return !hasWinningNumbers || hasPendingPurchases;
           });
           
@@ -194,7 +209,7 @@ const App: React.FC = () => {
     const interval = setInterval(runAutoDraw, 1 * 60 * 1000); // 每1分钟定期检查一次
     runAutoDraw();
     return () => clearInterval(interval);
-  }, [isAuthReady]);
+  }, [isAuthReady, activeUser?.id, adminConfig !== null, allUsers.length > 0]);
 
   const handleUpdateUser = async (uid: string, data: any) => {
     await lotteryApi.updateUser(uid, data);
