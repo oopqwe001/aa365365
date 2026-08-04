@@ -144,8 +144,13 @@ const App: React.FC = () => {
 
   // Auto Draw Logic
   const isDrawingRef = React.useRef(false);
+  const hasRunAutoDrawRef = React.useRef<string | null>(null);
+
   useEffect(() => {
-    if (!isAuthReady) return;
+    if (!isAuthReady || !activeUser?.isLoggedIn || !adminConfig || allUsers.length === 0) return;
+
+    // 确保每个登录用户（或管理员）在进入系统后仅执行一次自动开奖，彻底避免定时器轮询或状态变化引发重复触发
+    if (hasRunAutoDrawRef.current === activeUser.id) return;
 
     const runAutoDraw = async () => {
       const currentConfig = adminConfigRef.current;
@@ -153,6 +158,7 @@ const App: React.FC = () => {
       
       if (!currentConfig || isDrawingRef.current) return;
       isDrawingRef.current = true;
+      hasRunAutoDrawRef.current = activeUser.id; // 立即标记，防止在异步操作期间由于重入而重复执行
 
       try {
         // 使用日本标准时间 (JST) 进行判断
@@ -206,10 +212,8 @@ const App: React.FC = () => {
       }
     };
 
-    const interval = setInterval(runAutoDraw, 1 * 60 * 1000); // 每1分钟定期检查一次
     runAutoDraw();
-    return () => clearInterval(interval);
-  }, [isAuthReady, activeUser?.id, adminConfig !== null, allUsers.length > 0]);
+  }, [isAuthReady, activeUser?.id, activeUser?.isLoggedIn, !!adminConfig, allUsers.length > 0]);
 
   const handleUpdateUser = async (uid: string, data: any) => {
     await lotteryApi.updateUser(uid, data);
